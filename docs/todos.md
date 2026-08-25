@@ -1,11 +1,11 @@
 # Build Plan — AI-Assisted HR Recruitment Screening Platform
 
 Ordered, slice-by-slice implementation plan. Each phase ends in a working, verifiable increment.
-Follows `client-brief.md` (MVP scope) and `Architecture .md` (system boundaries).
+Follows `client-brief.md` (MVP scope) and `architecture.md` (system boundaries).
 
 Ground rules for every slice:
 - No new dependency without approval (exact pins, commit lockfiles).
-- Update `DOCS/build-along.md` in the same commit as every working slice.
+- Update `docs/build-along.md` in the same commit as every working slice.
 - Verify each slice: backend → `uv sync --locked` + `uv run --locked --no-sync ruff check app scripts`; frontend → typecheck + lint + build; plus manual browser walkthrough of the slice's user story.
 - Fictional data only. Never commit `.env`, keys, uploaded CVs, or databases.
 
@@ -13,7 +13,7 @@ Ground rules for every slice:
 
 ## Phase 0 — Project Foundation
 
-- [ ] **0.1** Restructure to canonical layout: rename `Backend/` → `backend/`, `Frontend/` → `frontend/`, `DOCS/` → `docs/` (AGENTS.md references lowercase paths); move `Architecture .md` → `docs/architecture.md` (fix space-in-name).
+- [x] **0.1** Restructure to canonical layout: rename `Backend/` → `backend/`, `Frontend/` → `frontend/`, `DOCS/` → `docs/` (AGENTS.md references lowercase paths); move `Architecture .md` → `docs/architecture.md` (fix space-in-name).
 - [ ] **0.2** Scaffold backend `app/` skeleton: `main.py` (FastAPI app, health endpoint), `core/config.py` (Pydantic Settings — the only config boundary), `db/session.py`, `db/base.py`.
 - [ ] **0.3** Scaffold frontend with Vite + React + TypeScript strict + Tailwind CSS; add `src/lib/env.ts` as the only frontend env boundary; set up pnpm with locked install (`savePrefix: ""`, `minimumReleaseAge` rules in `pnpm-workspace.yaml`).
 - [ ] **0.4** Create `frontend/src/lib/api.ts` typed client pointing at the FastAPI health endpoint; verify end-to-end (backend running, frontend fetches `/health`).
