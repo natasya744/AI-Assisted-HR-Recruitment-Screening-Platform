@@ -4,22 +4,17 @@
 
 ## 1. Purpose
 
-This document is the **authoritative engineering architecture** for the HR recruitment screening platform.
+This document is the **authoritative engineering architecture** for the HR recruitment screening platform. It must be followed by any developer or AI coding agent working on this project. If a proposed implementation conflicts with it, the implementation is reconsidered *before* code is written.
 
-It exists to prevent:
+It exists to keep the system:
 
-- Uncontrolled AI behavior
-- Hallucinated candidate information reaching HR
-- Invalid workflow transitions
-- Accidental automation of consequential decisions
-- Unclear module responsibilities
-- Inconsistent screening logic
-- Data corruption and fragmented records
+- **Controlled** — AI can never make or alter a consequential decision
+- **Predicable** — every workflow transition is explicit and enforced
+- **Explainable** — every score is backed by a breakdown and evidence
+- **Traceable** — every important action leaves an audit record
+- **Safe** — malformed or hallucinated AI output is blocked before persistence
 
-Any developer or AI coding agent working on this project MUST follow this document.
-If a proposed implementation conflicts with it, the implementation is reconsidered before coding.
-
-Business rationale lives in `client-brief.md`. This doc explains *what the system is* and *why it is shaped this way*, so both are readable in one place.
+Business rationale lives in `client-brief.md` (the *why*). This document is the *what* and the *how*.
 
 ---
 
@@ -27,95 +22,35 @@ Business rationale lives in `client-brief.md`. This doc explains *what the syste
 
 > **AI assists the recruitment process. It never controls it.**
 
-Concretely:
-
 | Concern | Owner |
 |---|---|
-| Extracting skills/experience from unstructured CV text | AI (OpenAI) |
-| Deciding whether extraction output is trustworthy | Deterministic validation code |
-| Scoring candidates against job requirements | Deterministic screening engine |
-| Approving or rejecting a candidate | HR (human-in-the-loop) |
-| Triggering emails to candidates | System, only after an HR decision |
+| Turning unstructured CV text into structured data | AI (OpenAI) |
+| Deciding whether that data is trustworthy | Deterministic validation code |
+| Scoring a candidate against job requirements | Deterministic screening engine |
+| Approving or rejecting a candidate | Human-in-the-loop (HR) |
+| Sending the candidate an email | System, only *after* an HR decision |
 | State transitions, permissions, persistence | Application code |
 
-The AI has exactly one job: convert unstructured CV text into structured data.
-It cannot change application status, cannot compute scores, and cannot contact anyone.
+The AI has exactly one job: convert CV text into structured data. It cannot change application status, compute scores, or contact anyone.
 
 ---
 
 ## 3. How the System Solves the Business Problems
 
-Each of the 10 business gaps identified in `client-brief.md` maps directly to a concrete architectural subsystem:
+Each of the ten gaps in `client-brief.md` maps to a concrete subsystem.
 
-```mermaid
-graph TD
-    classDef gap fill:#FFE4E6,stroke:#F43F5E,stroke-width:2px,color:#881337;
-    classDef solution fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#312E81;
-    classDef outcome fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#14532D;
-
-    subgraph BusinessGaps["10 Core Business Gaps"]
-        G1["Gap 1: Manual CV Reading"]:::gap
-        G2["Gap 2: Repetitive Data Entry"]:::gap
-        G3["Gap 3: Inconsistent Screening"]:::gap
-        G4["Gap 4: Opaque Scoring Criteria"]:::gap
-        G5["Gap 5: HR Accountability & Authority"]:::gap
-        G6["Gap 6: Manual Email Communication"]:::gap
-        G7["Gap 7: Fragmented Data"]:::gap
-        G8["Gap 8: Manual Excel Reports"]:::gap
-        G9["Gap 9: Lack of Traceability"]:::gap
-        G10["Gap 10: AI Hallucination & Risk"]:::gap
-    end
-
-    subgraph ArchitectureEngine["Architectural Solution & Subsystems"]
-        S1["Document Service + OpenAI Adapter"]:::solution
-        S2["Application Intake & Schema Auto-Mapping"]:::solution
-        S3["Deterministic Rule-Based Screening Engine"]:::solution
-        S4["Score Breakdown & Evidence Extractor"]:::solution
-        S5["Human-in-the-Loop Decision Gate"]:::solution
-        S6["Event-Driven Candidate Email Service"]:::solution
-        S7["Supabase PostgreSQL Central Source of Truth"]:::solution
-        S8["Automated Excel Export Service"]:::solution
-        S9["Append-Only Audit Log Subsystem"]:::solution
-        S10["3-Layer Validation & Provenance Engine"]:::solution
-    end
-
-    subgraph BusinessValue["Business Value Delivered"]
-        V1["90% Time Saved in Initial Review"]:::outcome
-        V2["Zero Manual Profile Typing"]:::outcome
-        V3["100% Objective & Fair Evaluation"]:::outcome
-        V4["Auditable, Explainable Decisions"]:::outcome
-        V5["Human Keeps Total Governance"]:::outcome
-        V6["Instant, Professional Candidate Updates"]:::outcome
-        V7["Unified Centralized Records"]:::outcome
-        V8["One-Click Stakeholder Reporting"]:::outcome
-        V9["Complete Legal & Operational Traceability"]:::outcome
-        V10["Zero Hallucinations in Database"]:::outcome
-    end
-
-    G1 --> S1 --> V1
-    G2 --> S2 --> V2
-    G3 --> S3 --> V3
-    G4 --> S4 --> V4
-    G5 --> S5 --> V5
-    G6 --> S6 --> V6
-    G7 --> S7 --> V7
-    G8 --> S8 --> V8
-    G9 --> S9 --> V9
-    G10 --> S10 --> V10
-```
-
-| # | Business Gap | Problem in Manual Process | Architectural Answer | Business Impact |
-|---|---|---|---|---|
-| 1 | **Manual CV Reading** | Hundreds of unstructured CV formats take hours to read | `DocumentService` + OpenAI extraction → structured candidate profile | 90% reduction in initial reading time |
-| 2 | **Repetitive Data Entry** | Typing names, emails, and experience into spreadsheets | Public intake form automatically seeds normalized DB records | Eliminates data entry errors & backlog |
-| 3 | **Inconsistent Screening** | Different recruiters use subjective criteria | Deterministic screening engine evaluates candidates against strict job criteria | 100% repeatable, fair evaluation |
-| 4 | **Opaque Scoring** | A score like "85" has no explanation | Persistent score breakdown (earned/max points per category) + evidence | Explainable decisions backed by exact citations |
-| 5 | **HR Accountability** | Risk of AI making unauthorized hiring/rejection | Hard decision gate: AI cannot alter status; only authorized HR can approve/reject | Human judgment and accountability preserved |
-| 6 | **Manual Candidate Emails** | Drafting individual emails is time-consuming | `EmailService` automatically drafts/sends notification only after HR decision | Instant, consistent candidate feedback |
-| 7 | **Fragmented Data** | Resumes in inboxes, notes in files, scores in sheets | Supabase PostgreSQL single source of truth + private bucket storage | Centralized, secure talent repository |
-| 8 | **Manual Reporting** | Hours spent consolidating spreadsheets for management | Streaming Excel export endpoint (`/exports/applications`) from DB | Instant reporting with up-to-date data |
-| 9 | **Lack of Traceability** | No historical record of who evaluated what and when | Append-only `audit_log` records every transition, payload, and reviewer | Complete operational & compliance trail |
-| 10 | **AI Unreliability** | LLMs can hallucinate qualifications or make errors | 3-Layer validation (Pydantic → business bounds → deterministic merge + provenance) | Zero unverified AI data enters screening |
+| # | Business Gap | Architectural Answer |
+|---|---|---|
+| 1 | Manual CV reading | Document service + OpenAI extraction → structured profile |
+| 2 | Repetitive data entry | Intake form seeds normalized records automatically |
+| 3 | Inconsistent screening | Deterministic rules engine against per-job requirements |
+| 4 | Opaque scores ("85") | Persistent score breakdown + evidence per category |
+| 5 | HR accountability | Hard decision gate — only HR can approve/reject |
+| 6 | Manual candidate emails | Email service fires automatically after the HR decision |
+| 7 | Fragmented data | Supabase Postgres + private storage = single source of truth |
+| 8 | Manual reporting | Streaming Excel export from the database |
+| 9 | No traceability | Append-only audit log on every transition |
+| 10 | AI unreliability | 3-layer validation: schema → business rules → deterministic merge |
 
 ---
 
@@ -123,381 +58,291 @@ graph TD
 
 **In scope:**
 
-    Candidate application → Document processing → AI extraction
-    → 3-Layer Validation → Screening → HR review → HR decision → Email → Reporting → Audit
+    Candidate application → CV processing → AI extraction → validation
+    → screening → HR review → HR decision → candidate email → reporting → audit
 
 **Explicitly out of scope** (future phases, require new approval):
 
-Interview scheduling · Calendar management · WhatsApp communication · Meeting creation · Automatic hiring/rejection · Candidate pipeline analytics
+Interview scheduling · Calendar management · WhatsApp · Meeting creation · Automatic hiring/rejection · Pipeline analytics
 
 ---
 
-## 5. High-Level Component Architecture
+## 5. Component Architecture
 
 ```mermaid
 flowchart TB
-    subgraph ClientTier["Client Tier (Browser)"]
-        CAND["Candidate Application Form<br/>(Public React Portal)"]
-        HRUI["HR Management Dashboard<br/>(Authenticated React SPA)"]
+    subgraph Client["Browser"]
+        CAND["Candidate portal (public form)"]
+        HR["HR dashboard (auth SPA)"]
     end
 
-    subgraph APITier["FastAPI Application Boundary"]
-        API["FastAPI Routing Layer<br/>(Pydantic Request/Response Validation)"]
-        
-        subgraph CoreServices["Business Logic & Domain Services"]
-            APP_SVC["Application Service<br/>(Intake & Upload Orchestration)"]
-            DOC_SVC["Document Service<br/>(PDF Parsing & Text Extraction)"]
-            SCR_SVC["Screening Engine<br/>(Deterministic Scoring & Rules)"]
-            DEC_SVC["Decision Service<br/>(HR Gate & State Transition Machine)"]
-            MAIL_SVC["Email Service<br/>(Event-Driven Notifications)"]
-            EXP_SVC["Export Service<br/>(Excel/XLSX Generator)"]
-            AUDIT_SVC["Audit Subsystem<br/>(Append-Only Event Logger)"]
-        end
-
-        subgraph AIAdapterTier["AI Provider Adapter (Isolated)"]
-            AI_ADAPTER["OpenAI Provider Adapter<br/>(Prompts & Strict JSON Schema)"]
-            VAL_ENGINE["3-Layer Validation Pipeline<br/>(Pydantic + Business Rules + Merge)"]
-        end
-
-        subgraph RepoTier["Persistence Layer"]
-            REPO["SQLAlchemy 2.0 Repositories"]
-        end
+    subgraph API["FastAPI Backend"]
+        ROUTES["API routes (thin HTTP/Pydantic layer)"]
+        SERVICES["Services: application · document · screening · decision · email · export"]
+        ADAPTER["OpenAI provider adapter (isolated)"]
+        VALIDATION["3-layer validation + provenance"]
+        REPO["SQLAlchemy repositories"]
     end
 
-    subgraph ExternalServices["External Systems & Storage"]
-        OPENAI_API["OpenAI API<br/>(Structured Extraction Only)"]
-        subgraph SupabaseCloud["Supabase Infrastructure"]
-            PG_DB[("PostgreSQL Database<br/>Single Source of Truth")]
-            PRIVATE_STORAGE["Private Storage Bucket<br/>(Candidate CV PDFs)"]
-        end
+    subgraph Platform["Supabase"]
+        DB[("PostgreSQL — single source of truth")]
+        STORE["Private storage bucket (CV PDFs)"]
     end
 
-    CAND -->|"1. Submit Application + CV"| API
-    HRUI -->|"6. Review & Decide"| API
-    
-    API --> APP_SVC
-    API --> DEC_SVC
-    API --> EXP_SVC
-    
-    APP_SVC --> DOC_SVC
-    APP_SVC --> REPO
-    APP_SVC --> PRIVATE_STORAGE
-    
-    DOC_SVC --> AI_ADAPTER
-    AI_ADAPTER <-->|"Extract JSON"| OPENAI_API
-    AI_ADAPTER --> VAL_ENGINE
-    VAL_ENGINE --> SCR_SVC
-    
-    SCR_SVC --> REPO
-    DEC_SVC --> MAIL_SVC
-    DEC_SVC --> REPO
-    
-    APP_SVC --> AUDIT_SVC
-    DEC_SVC --> AUDIT_SVC
-    AUDIT_SVC --> REPO
-    
-    REPO --> PG_DB
-    EXP_SVC --> REPO
+    OPENAI["OpenAI API"]
+
+    CAND --> ROUTES
+    HR --> ROUTES
+    ROUTES --> SERVICES
+    SERVICES --> REPO --> DB
+    SERVICES --> STORE
+    SERVICES --> ADAPTER <--> OPENAI
+    ADAPTER --> VALIDATION --> SERVICES
 ```
+
+**Flow of responsibility:** routes only parse HTTP → services orchestrate the workflow → repositories own all SQL → the OpenAI adapter is the *only* file that touches the OpenAI SDK → validation must approve AI output before anything is persisted or scored.
 
 ---
 
-## 6. End-to-End Flow, Step by Step
+## 6. End-to-End Workflow, Step by Step
 
-The complete life of one application, from submission to closure:
+This is the full life of one application, from submission to closure, numbered in the order it happens.
+
+1. **Submit** — candidate fills the form (job, name, email) and uploads a CV PDF.
+2. **Validate** — the API checks the fields and rejects bad file types/sizes.
+3. **Store** — the CV PDF is uploaded to the private bucket; only the path + metadata are kept in the DB (never the binary).
+4. **Extract text** — the document service downloads the CV and pulls plain text from the PDF.
+5. **AI extraction** — the extract adapter sends the text to OpenAI with a narrow prompt and a strict JSON schema.
+6. **Validate output** — the 3-layer pipeline (schema → business rules → deterministic merge) verifies and tags the profile.
+7. **Score** — the screening engine computes a deterministic score, breakdown, and evidence against the job's requirements.
+8. **Review** — HR opens the dossier: profile, score breakdown, evidence, and audit history.
+9. **Decide** — HR clicks Approve or Reject (with notes). The state machine allows no further transitions.
+10. **Email** — the email service sends the matching notification *only now*, purely as a result of HR's decision.
+11. **Report** — at any point HR can export the data to Excel via the export endpoint.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Candidate as Candidate
-    participant FE as Frontend Portal
-    participant API as FastAPI Backend
-    participant Storage as Supabase Storage
-    participant DocSvc as Document Service
-    participant OpenAI as OpenAI Adapter
-    participant Val as 3-Layer Validation
-    participant Screen as Screening Engine
-    participant DB as PostgreSQL DB
-    actor HR as HR Reviewer
-    participant Email as Email Service
-    participant Audit as Audit Log
+    actor Cand as Candidate
+    participant FE as Frontend portal
+    participant API as FastAPI
+    participant ST as Supabase Storage
+    participant DC as Document service
+    participant AI as OpenAI adapter
+    participant VAL as 3-layer validation
+    participant SCR as Screening engine
+    participant DB as PostgreSQL
+    actor HR as HR reviewer
+    participant ML as Email service
+    participant AU as Audit log
 
-    Candidate->>FE: Fill form (job, name, email) + upload CV.pdf
-    FE->>API: POST /api/applications (multipart/form-data)
-    API->>API: Validate file type (.pdf) and max file size
-    API->>Storage: Store CV in private bucket ('candidate-cvs')
-    Storage-->>API: cv_storage_path
-    API->>DB: Insert Candidate + Application (Status: APPLICATION_SUBMITTED)
-    API->>Audit: Record 'APPLICATION_CREATED' event
+    Cand->>FE: form + CV.pdf
+    FE->>API: POST /api/applications (multipart)
+    API->>API: validate fields, file type, size
+    API->>ST: store CV
+    ST-->>API: cv path
+    API->>DB: insert candidate + application (SUBMITTED)
+    API->>AU: log APPLIED
 
-    API->>DocSvc: Read CV binary from storage & extract raw text
-    alt PDF extraction fails (corrupt / unreadable)
-        DocSvc-->>API: Extraction Error
-        API->>DB: Update status to DOCUMENT_PROCESSING_FAILED
-        API->>Audit: Record 'DOCUMENT_PROCESSING_FAILED'
-        Note over API,DB: Routed to manual review queue; never silently dropped.
-    else Extraction succeeds
-        DocSvc-->>API: Extracted raw CV text
-        API->>OpenAI: Request candidate structured extraction
-        OpenAI-->>Val: Raw JSON output
-        Val->>Val: Layer 1: Pydantic schema validation
-        Val->>Val: Layer 2: Business sanity rules (experience, skills)
-        Val->>Val: Layer 3: Deterministic merge + provenance tagging
-        Val-->>API: Validated CandidateProfile
-        API->>DB: Insert CandidateProfile (Status: SCREENING)
-        API->>Audit: Record 'EXTRACTION_COMPLETED'
+    API->>DC: extract text from CV
+    alt unreadable PDF
+        API->>DB: status DOCUMENT_PROCESSING_FAILED
+        API->>AU: log FAILED
+        Note over API,HR: sent to manual review, never dropped
+    else text ok
+        API->>AI: extract structured profile
+        AI-->>VAL: raw JSON
+        VAL->>VAL: L1 schema, L2 business, L3 merge + provenance
+        VAL-->>API: validated profile
+        API->>DB: persist profile (SCREENING)
+        API->>AU: log EXTRACTED
     end
 
-    API->>Screen: Score CandidateProfile against Job requirements
-    Screen->>Screen: Calculate Experience + Skill Match + Education Points
-    Screen-->>API: ScreeningResult (Total score, Breakdown, Evidence citations)
-    API->>DB: Insert ScreeningResult (Status: HR_REVIEW)
-    API->>Audit: Record 'SCREENING_COMPLETED'
+    API->>SCR: score profile vs job
+    SCR-->>API: score + breakdown + evidence
+    API->>DB: persist result (HR_REVIEW)
+    API->>AU: log SCREENED
 
-    HR->>FE: Open HR Dashboard & inspect candidate dossier
-    FE->>API: GET /api/hr/applications/{id}
-    API-->>FE: Return Profile + Score Breakdown + Evidence + Audit Trail
-    
-    HR->>FE: Click Approve or Reject (with reviewer notes)
-    FE->>API: POST /api/hr/applications/{id}/decision {decision, notes}
-    API->>API: Enforce state machine (terminal state check)
-    API->>DB: Insert HRDecision, Update status to APPROVED / REJECTED
-    API->>Audit: Record 'HR_DECIDED' event
+    HR->>FE: open dossier
+    HR->>API: POST decision approve|reject
+    API->>API: lock state (terminal check)
+    API->>DB: hr_decision + status APPROVED/REJECTED
+    API->>AU: log DECIDED
 
-    API->>Email: Trigger notification workflow
-    Email-->>Candidate: Dispatch Approval / Rejection Email
-    API->>Audit: Record 'EMAIL_SENT' event with rendered snapshot
-
-    Note over HR,API: At any time, HR can trigger GET /api/exports/applications to generate an Excel spreadsheet.
+    API->>ML: send notification
+    ML-->>Cand: approval / rejection email
+    API->>AU: log EMAILED
 ```
 
 ---
 
 ## 7. Application State Machine
 
-Statuses are explicit and transitions are strictly enforced in code. Arbitrary or backward state transitions are forbidden.
+Transitions are explicit and enforced in code. No backward moves, no skipping the review gate, no second decision.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> APPLICATION_SUBMITTED : Candidate submits form & CV PDF
-    
-    APPLICATION_SUBMITTED --> VALIDATING : Fetch CV from storage & parse text
-    
-    VALIDATING --> SCREENING : CV parsed & structured profile validated
-    VALIDATING --> DOCUMENT_PROCESSING_FAILED : Corrupted, unreadable, or encrypted PDF
-    
-    DOCUMENT_PROCESSING_FAILED --> MANUAL_REVIEW : Flagged for manual HR inspection
-    
-    SCREENING --> HR_REVIEW : Deterministic screening score computed
-    
-    HR_REVIEW --> APPROVED : HR explicitly approves candidate
-    HR_REVIEW --> REJECTED : HR explicitly rejects candidate
-    
-    MANUAL_REVIEW --> APPROVED : HR manually reviews & approves
-    MANUAL_REVIEW --> REJECTED : HR manually reviews & rejects
-    
-    APPROVED --> [*] : Terminal State (Email sent, immutable)
-    REJECTED --> [*] : Terminal State (Email sent, immutable)
+    [*] --> APPLICATION_SUBMITTED: valid upload
+    APPLICATION_SUBMITTED --> VALIDATING: CV fetched, parsing text
+    VALIDATING --> SCREENING: profile validated
+    VALIDATING --> DOCUMENT_PROCESSING_FAILED: unreadable PDF
+    DOCUMENT_PROCESSING_FAILED --> MANUAL_REVIEW: HR inspection
+    SCREENING --> HR_REVIEW: score computed
+    HR_REVIEW --> APPROVED: HR approves
+    HR_REVIEW --> REJECTED: HR rejects
+    MANUAL_REVIEW --> APPROVED: HR manual approve
+    MANUAL_REVIEW --> REJECTED: HR manual reject
+    APPROVED --> [*]
+    REJECTED --> [*]
 ```
 
-**State Transition Invariants:**
-1. `APPROVED` and `REJECTED` are strictly terminal. Once decided, the state is locked forever.
-2. An application can never bypass the `HR_REVIEW` or `MANUAL_REVIEW` gate to reach `APPROVED` or `REJECTED`.
-3. Every state transition automatically writes a corresponding row to `audit_log`.
+Invariants:
+
+1. `APPROVED` and `REJECTED` are terminal and irreversible.
+2. `APPROVED`/`REJECTED` are only reachable through the `HR_REVIEW` or `MANUAL_REVIEW` gate — AI can never route an application there directly.
+3. Every transition writes one `audit_log` row (who, what, when, payload snapshot).
 
 ---
 
-## 8. AI Reliability: 3-Layer Validation Pipeline
+## 8. AI Reliability: The 3-Layer Validation Pipeline
 
-To eliminate hallucination and guarantee data integrity (Business Gap 10):
+The defense against hallucinated or malformed AI output (Business Gap 10):
 
 ```mermaid
 flowchart TD
-    RAW["Raw LLM Output (JSON String)"] --> L1{"Layer 1: Schema Validation<br/>(Strict Pydantic Model)"}
-    
-    L1 -- "Schema Mismatch / Malformed JSON" --> RETRY{"Retry Extraction Once?"}
-    RETRY -- Yes --> RAW
-    RETRY -- No / Failed --> FAIL["Mark as DOCUMENT_PROCESSING_FAILED<br/>Route to HR MANUAL_REVIEW"]
-    
-    L1 -- "Valid JSON & Types" --> L2{"Layer 2: Business Sanity Rules<br/>(Plausibility Checks)"}
-    
-    L2 -- "Negative Years / Future Dates / Empty Data" --> FAIL
-    
-    L2 -- "Passed Plausibility" --> L3["Layer 3: Deterministic Merge<br/>& Field-Level Provenance Engine"]
-    
-    L3 --> PROFILE["Validated CandidateProfile<br/>(Tagged with: 'ai', 'deterministic', 'manual')"]
-    
-    PROFILE --> SCREEN["Deterministic Screening Engine<br/>(100% Rule-Based, Zero AI)"]
+    RAW["Raw LLM JSON output"] --> L1{1. Schema validation}
+    L1 -- malformed --> R{Retry once}
+    R -- fail --> FAIL["DOCUMENT_PROCESSING_FAILED → manual review"]
+    L1 -- valid --> L2{2. Business sanity}
+    L2 -- implausible --> FAIL
+    L2 -- plausible --> L3["3. Deterministic merge + provenance"]
+    L3 --> P["Validated candidate profile:ai | deterministic | manual"]
+    P --> S["Screening engine (100% rules, zero AI)"]
 
-    classDef success fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#14532D;
-    classDef failure fill:#FFE4E6,stroke:#F43F5E,stroke-width:2px,color:#881337;
-    classDef process fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#312E81;
-    
-    class PROFILE,SCREEN success;
-    class FAIL failure;
-    class RAW,L3 process;
+    classDef ok fill:#E7F6EC,stroke:#2E7D32;
+    classDef bad fill:#FDECEA,stroke:#C62828;
+    classDef proc fill:#EAF2FD,stroke:#1565C0;
+    class P,S ok;
+    class FAIL bad;
+    class RAW,L3 proc;
 ```
 
-- **Layer 1 — Pydantic:** Enforces exact schemas and strict types. Malformed LLM output never touches domain models.
-- **Layer 2 — Business Rules:** Validates human sanity bounds (e.g. years of experience between 0 and 50, normalized education levels, non-empty skills).
-- **Layer 3 — Deterministic Merge & Provenance:** Missing or partial fields are enriched by deterministic regex/keyword parsing directly from the CV text. Every single field tracks its provenance (`ai`, `deterministic`, or `manual`).
+- **Layer 1 — Pydantic:** strict schema and types. Malformed output never reaches the domain.
+- **Layer 2 — Business rules:** plausible human bounds only (e.g. experience 0–50 years, normalized education, non-empty skills). Implausible values are rejected, not silently clamped.
+- **Layer 3 — Deterministic merge:** fields the model missed are filled by deterministic parsing of the CV text. Every field carries a provenance tag (`ai` / `deterministic` / `manual`) so HR always knows its origin.
+
+The screening engine consumes only validated profiles. It contains zero AI.
 
 ---
 
-## 9. Data Model & Entity Relationships
+## 9. Data Model
 
-PostgreSQL is the single source of truth. Binary files stay in Supabase Storage; the DB holds relational records, structured profiles, evidence JSON, and audit events.
+Postgres is the source of truth. Binaries live in Storage; the DB holds references.
 
 ```mermaid
 erDiagram
-    JOB ||--o{ APPLICATION : "receives"
-    CANDIDATE ||--o{ APPLICATION : "submits"
-    APPLICATION ||--o| CANDIDATE_PROFILE : "has extracted"
-    APPLICATION ||--o| SCREENING_RESULT : "is scored by"
-    APPLICATION ||--o| HR_DECISION : "is finalized by"
-    APPLICATION ||--o{ AUDIT_LOG : "is traced by"
+    JOB ||--o{ APPLICATION : receives
+    CANDIDATE ||--o{ APPLICATION : submits
+    APPLICATION ||--o| CANDIDATE_PROFILE : has
+    APPLICATION ||--o| SCREENING_RESULT : is scored by
+    APPLICATION ||--o| HR_DECISION : is finalized by
+    APPLICATION ||--o{ AUDIT_LOG : is traced by
 
     JOB {
         uuid id PK
         string title
-        string department
         int min_experience_years
-        jsonb required_skills "list of skill strings"
-        jsonb education_requirements "accepted degrees"
-        jsonb score_weights "category weights (e.g. 40/40/20)"
+        jsonb required_skills
+        jsonb education_requirements
+        jsonb score_weights
         boolean is_open
-        datetime created_at
     }
-
     CANDIDATE {
         uuid id PK
         string full_name
         string email
-        string phone
-        datetime created_at
     }
-
     APPLICATION {
         uuid id PK
         uuid job_id FK
         uuid candidate_id FK
-        string status "Enum: SUBMITTED, SCREENING, HR_REVIEW, etc."
-        string cv_storage_path "Path in Supabase Storage bucket"
-        jsonb cv_metadata "File name, size, mime type, hash"
+        string status
+        string cv_storage_path
+        jsonb cv_metadata
         datetime applied_at
     }
-
     CANDIDATE_PROFILE {
         uuid id PK
         uuid application_id FK
-        jsonb extracted_data "Structured skills, experience, education"
-        jsonb provenance "Field-level origin: ai | deterministic | manual"
-        string extraction_status "SUCCESS | PARTIAL | FAILED"
-        datetime created_at
+        jsonb extracted_data
+        jsonb provenance
+        string extraction_status
     }
-
     SCREENING_RESULT {
         uuid id PK
         uuid application_id FK
-        int total_score "0 to 100"
-        jsonb breakdown "Score per category (earned / max)"
-        jsonb evidence "Matched text snippets and citations"
-        datetime scored_at
+        int total_score
+        jsonb breakdown
+        jsonb evidence
     }
-
     HR_DECISION {
         uuid id PK
         uuid application_id FK
-        string decision "APPROVE | REJECT"
+        string decision
         string reviewer_email
         text notes
         datetime decided_at
     }
-
     AUDIT_LOG {
         uuid id PK
         uuid application_id FK
-        string event_type "APPLICATION_CREATED, HR_DECIDED, etc."
-        jsonb payload "State diff snapshot & context"
-        string actor "SYSTEM | CANDIDATE | HR_USER"
+        string event_type
+        jsonb payload
         datetime created_at
     }
 ```
 
----
-
-## 10. Security & Privacy Architecture
-
-```mermaid
-graph TD
-    subgraph PublicInternet["Public Internet"]
-        CAND_USER["Candidate Browser"]
-    end
-
-    subgraph AuthenticatedZone["Authenticated HR Zone"]
-        HR_USER["HR Recruiter Browser<br/>(Supabase JWT Auth)"]
-    end
-
-    subgraph BackendEnclave["Backend Protected Boundary (FastAPI)"]
-        AUTH_GUARD["Authentication & RBAC Middleware"]
-        VALIDATOR["Input Sanitization & Antivirus/MIME Check"]
-        CORE_APP["Application Core Engine"]
-        SEC_CFG["core/config.py (Zero Leaked Secrets)"]
-    end
-
-    subgraph IsolatedServices["Isolated Data & AI Providers"]
-        SUPA_STORAGE[("Private Supabase Storage<br/>(No Public Access Policy)")]
-        SUPA_DB[("Supabase PostgreSQL<br/>(Encrypted at Rest)")]
-        OPENAI_EXT["OpenAI Provider Adapter<br/>(Ephemeral Processing Only)"]
-    end
-
-    CAND_USER -->|"POST /applications (Public Rate-Limited)"| VALIDATOR
-    HR_USER -->|"Bearer Token"| AUTH_GUARD
-    
-    AUTH_GUARD --> CORE_APP
-    VALIDATOR --> CORE_APP
-    
-    CORE_APP -->|"Service Role Key"| SUPA_STORAGE
-    CORE_APP -->|"Encrypted Connection"| SUPA_DB
-    CORE_APP -->|"No PII Leaks"| OPENAI_EXT
-```
-
-**Security Rules:**
-1. `.env` and all keys are strictly gitignored. `service_role` key exists only server-side.
-2. The Storage bucket is private; CV downloads happen through authenticated backend endpoints only.
-3. Every API boundary validates input (file type, size, field schemas).
-4. Uploaded CVs and databases are never committed; sample data must be fictional.
-5. The audit log is append-only.
+Schema changes go through Alembic migrations only — never manual dashboard edits.
 
 ---
 
-## 11. Module Responsibilities
+## 10. Module Responsibilities
 
-Backend layout mirrors responsibility boundaries. Routes are thin; services orchestrate; repositories own SQL; provider adapters isolate third-party SDK types.
+Routes are thin, services orchestrate, repositories own SQL, provider adapters isolate third-party SDK types.
 
 | Module | Owns | Must NOT |
 |---|---|---|
-| `api/routes/` | HTTP parsing, auth, response models, status codes | Contain business logic or SQL |
-| `services/` | Workflow orchestration, state transitions | Talk to HTTP or write raw queries directly in routes |
+| `api/routes/` | HTTP parsing, auth, response models, status codes | Business logic or SQL |
+| `services/` | Workflow orchestration, state transitions | Talk to HTTP or write raw SQL |
 | `repositories/` | All SQLAlchemy access | Know about HTTP or prompts |
-| `ai/` + `providers/` | OpenAI prompts, adapters, extraction schemas | Leak SDK types beyond their boundary |
+| `ai/` + `providers/` | OpenAI prompts, adapters, extraction schemas | Leak SDK types beyond the boundary |
 | `core/config.py` | The only place settings/env are read | Be bypassed by `os.getenv` elsewhere |
-| `db/` | Session/engine setup | Own schema (that's Alembic) |
-| `schemas/` | Pydantic request/response contracts | Duplicate model logic ad hoc |
+| `schemas/` | Pydantic request/response contracts | Duplicate model logic |
+| `db/` | Session/engine setup | Own schema (Alembic does) |
 
-Frontend (`frontend/`): React SPA (Vite, TypeScript strict, Tailwind, shadcn/ui, React Router). Talks only to the backend API through `src/lib/api.ts`; env vars read only via `src/lib/env.ts`.
+Frontend (`frontend/`): React SPA (Vite, TypeScript strict, Tailwind, shadcn/ui, React Router). It talks only to the backend API through `src/lib/api.ts`; env vars are read only through `src/lib/env.ts`.
 
 ---
 
-## 12. Locked Technical Decisions
+## 11. Locked Technical Decisions
 
-These are settled; changing any of them requires explicit re-approval:
+Settled. Changing any of them requires explicit re-approval.
 
-1. **Extraction:** OpenAI as the sole AI provider, behind adapter interfaces in `app/providers/`. No separate document-intelligence service. Deterministic merging fills gaps and exposes provenance.
-2. **Database:** Supabase Postgres everywhere (dev and prod), SQLAlchemy models, Alembic migrations. SQLite is not used.
-3. **File storage:** Supabase Storage private bucket; DB stores path/metadata only, never binaries.
-4. **Email:** `EmailService` interface with pluggable transport. MVP ships a console/file transport for development; a real transactional provider is added later without touching workflow code.
-5. **Auth:** Supabase email auth for the HR side (no SSO); public application form requires no login.
-6. **Export:** Excel generation from Postgres, isolated in `export_service.py`.
-7. **Dependencies:** exact pins only, lockfiles committed, cooldown configs preserved, nothing added without Tasya's approval.
-8. **No automated test suites** — verification is lint/typecheck/build plus demo-oriented walkthroughs of the fictional corpus.
+1. **Extraction:** OpenAI is the sole AI provider, behind adapters in `app/providers/`. No separate document-intelligence service. Deterministic merging fills gaps and exposes provenance.
+2. **Database:** Supabase Postgres everywhere (dev and prod). SQLAlchemy models, Alembic migrations. SQLite is not used.
+3. **Storage:** Supabase private bucket; the DB stores paths/metadata only, never binaries.
+4. **Email:** `EmailService` interface with pluggable transport. MVP ships console/file transport in development; a real provider is added later without touching workflow code.
+5. **Auth:** Supabase email auth for HR (no SSO); the public application form is unauthenticated.
+6. **Export:** Excel from Postgres, isolated in `export_service.py` (`openpyxl`, approved).
+7. **Dependencies:** exact pins, committed lockfiles, cooldown configs preserved, nothing added without approval.
+8. **Verification:** lint/typecheck/build + demo-oriented walkthroughs of the fictional corpus. No committed automated test suites.
+
+---
+
+## 12. Security Rules
+
+- `.env` and all keys are gitignored; `service_role` exists server-side only.
+- The Storage bucket is private; CVs are served only through authenticated backend endpoints.
+- Every API boundary validates input (file type, size, field schemas).
+- Uploaded CVs and databases are never committed; sample data is fictional.
+- The audit log is append-only.
