@@ -78,7 +78,7 @@ Ground rules for every slice:
 
 ## Phase 8 — Excel Export & Reporting
 
-- [ ] **8.1** `services/export_service.py`: generate `.xlsx` from applications (name, email, position, applied date, score, screening outcome, HR decision, decision date). Library choice needs approval (e.g. pinned `openpyxl`) vs local minimal writer.
+- [ ] **8.1** `services/export_service.py`: generate `.xlsx` from applications (name, email, position, applied date, score, screening outcome, HR decision, decision date). **Approved: `openpyxl==3.1.5`** (pure-Python xlsx writer, no transitive deps; pandas not needed — build rows directly).
 - [ ] **8.2** Route: `GET /api/exports/applications?job_id=...` streaming file response.
 - [ ] **8.3** Frontend: export button on HR dashboard (optionally filtered by job).
 - [ ] **Checkpoint:** export opens in Excel/Numbers with correct columns and rows matching the dashboard.
