@@ -97,11 +97,12 @@ Ground rules for every slice:
 
 Interview scheduling, calendars, WhatsApp/meetings, auto-hire/auto-reject, candidate pipeline analytics, advanced dashboards — future phases only if approved as new requirements.
 
-## Open Decisions (ask Tasya before starting)
+## Decisions Log
 
-| # | Decision | Phase |
-|---|----------|-------|
-| 1 | PDF text extraction library (pin vs local code) | 4 |
-| 2 | Excel writer library (`openpyxl` pin vs local) | 8 |
-| 3 | Email delivery mechanism for dev/prod | 7 |
-| 4 | Auth approach for HR dashboard (Supabase email auth?) | 6 |
+| # | Topic | Decision | Status |
+|---|-------|----------|--------|
+| 1 | **PDF Text Extraction** | Python-based text extraction (`pypdf == 4.3.1` vs local extractor) to extract plain text from uploaded CV PDFs before sending to OpenAI | Under Review |
+| 2 | **Email Delivery Provider** | Pluggable transport: Console/file for local dev; choice between Resend, SendGrid, or SMTP for prod | Under Review |
+| 3 | **Excel Writer Library** | Pinned `openpyxl == 3.1.5` for streaming `.xlsx` exports in Phase 8 | **Approved** |
+| 4 | **HR Dashboard Auth** | Supabase Email / Password Auth for HR recruiters (public portal remains unauthenticated) | **Approved** |
+
