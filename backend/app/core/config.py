@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     EMAIL_OUT_DIR: str = "./data/outbound-emails"
 
     # CORS Allowed Origins (comma-separated list of origins)
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:9001,http://localhost:3000"
+    ALLOWED_ORIGINS: str = "http://localhost:9001,http://localhost:3000"
 
     model_config = SettingsConfigDict(
         env_file=".env",
