@@ -80,7 +80,7 @@ Always review generated migrations before applying.
 cd backend
 uv sync --locked
 uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 9000
 ```
 
 `backend/app` is installed as an editable package by `uv sync`, so `from app... import ...` works from uvicorn, scripts, and Jupyter kernels using the backend venv.

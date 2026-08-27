@@ -120,59 +120,72 @@ This is the full life of one application, from submission to closure, numbered i
 10. **Email** — the email service sends the matching notification *only now*, purely as a result of HR's decision.
 11. **Report** — at any point HR can export the data to Excel via the export endpoint.
 
+### Operational Flow (Visual Summary)
+
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Cand as Candidate
-    participant FE as Frontend portal
-    participant API as FastAPI
-    participant ST as Supabase Storage
-    participant DC as Document service
-    participant AI as OpenAI adapter
-    participant VAL as 3-layer validation
-    participant SCR as Screening engine
-    participant DB as PostgreSQL
-    actor HR as HR reviewer
-    participant ML as Email service
-    participant AU as Audit log
+flowchart TD
+    %% Styling
+    classDef start fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1;
+    classDef process fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C;
+    classDef decision fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#E65100;
+    classDef success fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20;
+    classDef fail fill:#FFEBEE,stroke:#C62828,stroke-width:2px,color:#B71C1C;
+    classDef external fill:#ECEFF1,stroke:#546E7A,stroke-width:1px,stroke-dasharray: 5 5,color:#37474F;
 
-    Cand->>FE: form + CV.pdf
-    FE->>API: POST /api/applications (multipart)
-    API->>API: validate fields, file type, size
-    API->>ST: store CV
-    ST-->>API: cv path
-    API->>DB: insert candidate + application (SUBMITTED)
-    API->>AU: log APPLIED
+    %% Nodes
+    START([Candidate submits\napplication + CV]):::start
+    VALIDATE{Validate\nfields + file}:::decision
+    STORE[Store CV in\nSupabase Storage]:::process
+    DB_CREATE[(Create candidate +\napplication record\nStatus: SUBMITTED)]:::process
+    AUDIT1[Audit: APPLIED]:::process
+    EXTRACT[Document Service:\nExtract PDF text]:::process
+    EXTRACT_OK{PDF\nreadable?}:::decision
+    FAIL_PDF[Status: DOCUMENT_PROCESSING_FAILED\n→ Manual Review]:::fail
+    AUDIT_FAIL[Audit: FAILED]:::fail
+    AI_EXTRACT[OpenAI Adapter:\nExtract structured profile]:::external
+    VALIDATE_PIPE[3-Layer Validation:\nSchema → Business → Merge]:::process
+    PROFILE_OK[Validated profile\nwith provenance]:::success
+    DB_PROFILE[(Persist profile\nStatus: SCREENING)]:::process
+    AUDIT_EXT[Audit: EXTRACTED]:::process
+    SCREEN[Screening Engine:\nDeterministic scoring]:::process
+    RESULT[Score + Breakdown +\nEvidence]:::success
+    DB_SCREEN[(Persist result\nStatus: HR_REVIEW)]:::process
+    AUDIT_SCR[Audit: SCREENED]:::process
+    HR_REVIEW[HR opens dossier\nreviews profile + score]:::process
+    HR_DECIDE{HR decision:\nApprove or Reject}:::decision
+    DB_DECISION[(Persist decision\nStatus: APPROVED/REJECTED)]:::success
+    AUDIT_DEC[Audit: DECIDED]:::process
+    EMAIL[Email Service:\nSend notification]:::process
+    AUDIT_EMAIL[Audit: EMAILED]:::process
+    EXPORT[Export to Excel\n(any time)]:::process
 
-    API->>DC: extract text from CV
-    alt unreadable PDF
-        API->>DB: status DOCUMENT_PROCESSING_FAILED
-        API->>AU: log FAILED
-        Note over API,HR: sent to manual review, never dropped
-    else text ok
-        API->>AI: extract structured profile
-        AI-->>VAL: raw JSON
-        VAL->>VAL: L1 schema, L2 business, L3 merge + provenance
-        VAL-->>API: validated profile
-        API->>DB: persist profile (SCREENING)
-        API->>AU: log EXTRACTED
-    end
-
-    API->>SCR: score profile vs job
-    SCR-->>API: score + breakdown + evidence
-    API->>DB: persist result (HR_REVIEW)
-    API->>AU: log SCREENED
-
-    HR->>FE: open dossier
-    HR->>API: POST decision approve|reject
-    API->>API: lock state (terminal check)
-    API->>DB: hr_decision + status APPROVED/REJECTED
-    API->>AU: log DECIDED
-
-    API->>ML: send notification
-    ML-->>Cand: approval / rejection email
-    API->>AU: log EMAILED
-```
+    %% Flow
+    START --> VALIDATE
+    VALIDATE -->|valid| STORE
+    VALIDATE -->|invalid| START
+    STORE --> DB_CREATE
+    DB_CREATE --> AUDIT1
+    AUDIT1 --> EXTRACT
+    EXTRACT --> EXTRACT_OK
+    EXTRACT_OK -->|no| FAIL_PDF
+    FAIL_PDF --> AUDIT_FAIL
+    EXTRACT_OK -->|yes| AI_EXTRACT
+    AI_EXTRACT --> VALIDATE_PIPE
+    VALIDATE_PIPE --> PROFILE_OK
+    PROFILE_OK --> DB_PROFILE
+    DB_PROFILE --> AUDIT_EXT
+    AUDIT_EXT --> SCREEN
+    SCREEN --> RESULT
+    RESULT --> DB_SCREEN
+    DB_SCREEN --> AUDIT_SCR
+    AUDIT_SCR --> HR_REVIEW
+    HR_REVIEW --> HR_DECIDE
+    HR_DECIDE --> DB_DECISION
+    DB_DECISION --> AUDIT_DEC
+    AUDIT_DEC --> EMAIL
+    EMAIL --> AUDIT_EMAIL
+    AUDIT_EMAIL --> EXPORT
+    EXPORT -.->|anytime| HR_REVIEW
 
 ---
 

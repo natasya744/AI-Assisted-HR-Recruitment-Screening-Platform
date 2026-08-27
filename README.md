@@ -44,7 +44,7 @@ Backend:
 cd backend
 uv sync --locked
 uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --port 9000
 ```
 
 Frontend:
@@ -52,7 +52,7 @@ Frontend:
 ```bash
 cd frontend
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm dev -- --port 9001
 ```
 
 Setup guides live in [`docs/guides/`](docs/guides/). The MVP build order and verification policy are in [`docs/todos.md`](docs/todos.md) and [`AGENTS.md`](AGENTS.md).
