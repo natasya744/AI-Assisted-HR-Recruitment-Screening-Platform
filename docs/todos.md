@@ -24,10 +24,10 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 **Goal:** both apps boot and talk to each other over a health endpoint.
 
 - [x] **0.1** Folders are already canonical: `backend/`, `frontend/`, `docs/`. `docs/architecture.md` and `docs/client-brief.md` define the design and the *why*. *(done)*
-- [ ] **0.2** Backend scaffold: `app/main.py` (FastAPI + `/health`), `app/core/config.py` (Pydantic Settings — only config boundary), `app/db/session.py`, `app/db/base.py`, `app/.gitkeep` replaced by real modules.
-- [ ] **0.3** Spend `OPENAI_API_KEY`, etc. via `config.py` from `backend/.env` (copy from `.env.example`). Never `os.getenv` outside `config.py`.
-- [ ] **0.4** Frontend scaffold: `frontend/` Vite + React + TS strict + Tailwind + React Router. Add `src/lib/env.ts` (validates `VITE_*` at boot) and `src/lib/api.ts`/`http.ts` (fetch client to `VITE_API_BASE_URL`).
-- [ ] **0.5** `GET /health` wired; frontend calls it on load.
+- [x] **0.2** Backend scaffold: `app/main.py` (FastAPI + `/health`), `app/core/config.py` (Pydantic Settings — only config boundary), `app/db/session.py`, `app/db/base.py`, `app/.gitkeep` replaced by real modules.
+- [x] **0.3** Spend `OPENAI_API_KEY`, etc. via `config.py` from `backend/.env` (copy from `.env.example`). Never `os.getenv` outside `config.py`.
+- [x] **0.4** Frontend scaffold: `frontend/` Vite + React + TS strict + Tailwind + React Router. Add `src/lib/env.ts` (validates `VITE_*` at boot) and `src/lib/api.ts`/`http.ts` (fetch client to `VITE_API_BASE_URL`).
+- [ x **0.5** `GET /health` wired; frontend calls it on load.
 - [x] **Checkpoint:** backend boots, frontend boots, health check succeeds in the browser. Both lint clean.
 
 ---
@@ -36,9 +36,9 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** Postgres + private storage bucket are configured and reachable.
 
-- [ ] **1.1** Create a Supabase project (see `docs/guides/supabase-setup.md`).
-- [ ] **1.2** Collect `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (direct/session, not pooler) into `backend/.env`.
-- [ ] **1.3** Add Alembic to the backend (**approval needed** for the dep). Configure `alembic/env.py` to read `DATABASE_URL` from `config.py`.
+- [x] **1.1** Create a Supabase project (see `docs/guides/supabase-setup.md`).
+- [x] **1.2** Collect `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (direct/session, not pooler) into `backend/.env`.
+- [x] **1.3** Add Alembic to the backend (**approval needed** for the dep). Configure `alembic/env.py` to read `DATABASE_URL` from `config.py`.
 - [ ] **1.4** Create private Storage bucket `candidate-cvs` (no public access).
 - [ ] **Checkpoint:** `uv run alembic upgrade head` succeeds against an empty schema; an authenticated Storage upload+download round-trips from a script.
 

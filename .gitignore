@@ -42,6 +42,9 @@ logs/
 
 *.pyc
 backend/data/
-samples/sample-cv.pdf
+
+# Sample documents (private — never commit real CVs or text derived from them)
+samples/*
+!samples/.gitkeep
 frontend/node_modules/
 frontend/dist/

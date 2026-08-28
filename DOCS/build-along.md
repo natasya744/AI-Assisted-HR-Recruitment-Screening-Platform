@@ -91,3 +91,108 @@ This guide documents every completed slice, explaining what was built, why, exac
 - `frontend/.env.example` — updated port reference
 - `backend/.env` — `ALLOWED_ORIGINS` → `http://localhost:5174`
 - `backend/.env.example` — updated port reference
+
+---
+
+## Phase 1 — Database & Storage
+
+### Slice 1.3: Alembic Migrations
+- **Outcome**: Added Alembic (already in `pyproject.toml` as `alembic==1.19.1`) and configured it to read `DATABASE_URL` from `app.core.config.Settings` instead of a hardcoded URL.
+  - [`backend/alembic/env.py`](../backend/alembic/env.py): Imports `settings` and `Base.metadata` from the app. `run_migrations_online` uses `create_engine(settings.DATABASE_URL)`.
+  - [`backend/alembic/script.py.mako`](../backend/alembic/script.py.mako): Default template.
+- **Why**: Alembic is the standard schema-migration tool for SQLAlchemy, used for all schema changes per the architecture document. Reading the URL from `config.py` enforces the single-config-boundary rule.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  alembic init alembic
+  # then edited alembic/env.py to import settings + Base
+  alembic check
+  ```
+- **Observable Result**:
+  ```
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+  ...
+  No new upgrade operations detected.
+  ```
+- **Note**: The DATABASE_URL in `.env` was changed from `postgresql://` to `postgresql+psycopg://` to match the installed `psycopg[binary]` driver (not `psycopg2`).
+  - `backend/.env`, `backend/.env.example`, and the `config.py` default were all updated.
+- **Checkpoint**: Alembic connects to Supabase Postgres, detects current state, and is ready for the first migration.
+
+### Slice 1.4: Supabase Storage Bucket — `candidate-cvs`
+- **Outcome**: Created the private Storage bucket infrastructure and frontend helpers.
+  - [`backend/app/core/config.py`](../backend/app/core/config.py): Added `SUPABASE_STORAGE_BUCKET = "candidate-cvs"`.
+  - [`backend/app/services/storage_service.py`](../backend/app/services/storage_service.py): `get_storage_client()`, `ensure_candidate_cvs_bucket()`, `get_public_url()`, `get_authenticated_url()`.
+  - [`backend/scripts/setup_storage.py`](../backend/scripts/setup_storage.py): CLI script to create the bucket.
+  - [`frontend/src/lib/supabase.ts`](../frontend/src/lib/supabase.ts): Supabase client initialized from `env.ts`.
+  - [`frontend/src/lib/storage.ts`](../frontend/src/lib/storage.ts): `uploadCandidateCv()`, `getCvPublicUrl()`, `deleteCandidateCv()` helpers.
+- **Why**: CV PDFs are stored in a private Supabase Storage bucket. The DB stores only the storage path + metadata, never the binary content. The service-role key (server-side) creates/manages the bucket; the anon key (frontend) is used for candidate uploads with bucket-level RLS in production.
+- **Exact Commands to Run**:
+  ```bash
+  cd backend
+  uv run python scripts/setup_storage.py
+  ```
+- **Observable Result**: `Storage bucket 'candidate-cvs' ready.  Bucket visibility: private`
+- **Checkpoint**: Backend has storage service + setup script; frontend has Supabase client + upload/download helpers. Both compile and lint clean.
+
+### Files created (Phase 1)
+- `backend/alembic/env.py`
+- `backend/alembic/script.py.mako`
+- `backend/alembic/versions/.gitkeep`
+- `backend/alembic/README`
+- `backend/alembic.ini`
+- `backend/app/services/__init__.py`
+- `backend/app/services/storage_service.py`
+- `backend/scripts/setup_storage.py`
+- `frontend/src/lib/supabase.ts`
+- `frontend/src/lib/storage.ts`
+
+### Files modified (Phase 1)
+- `backend/.env` — `DATABASE_URL` scheme changed to `postgresql+psycopg://`
+- `backend/.env.example` — updated scheme and port
+- `backend/app/core/config.py` — added `SUPABASE_STORAGE_BUCKET`, updated default DATABASE_URL scheme
+
+---
+
+### Slice 1.5: Docling PDF → Markdown Service
+- **Outcome**: Added PDF-to-markdown conversion using docling with HierarchicalChunker, and verified it against the sample CV.
+  - [`backend/pyproject.toml`](../backend/pyproject.toml): Moved `docling==2.121.0` from dev dependencies to main dependencies (needed at runtime).
+  - [`backend/app/services/document_service.py`](../backend/app/services/document_service.py): `pdf_to_markdown()` and `pdf_to_chunks()` using lazy-initialized `DocumentConverter` + `HierarchicalChunker`. Supports both file paths and raw bytes.
+  - [`backend/scripts/test_docling.py`](../backend/scripts/test_docling.py): Reads the sample CV from `samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf`, converts to markdown, and prints hierarchical chunks.
+- **Why**: Docling converts PDFs to clean markdown before sending to OpenAI for extraction. HierarchicalChunker preserves document structure (headings, sections) which is essential for accurate CV parsing.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run python scripts/test_docling.py
+  ```
+- **Observable Result**:
+  ```
+  Processing: Natasya_AI_Specialist_AutoGroup_Resume.pdf
+  
+  >>> pdf_to_markdown()
+  
+  ## NATASYA
+  ## AI Specialist (Implementation & Automation)
+  Jakarta, Indonesia | +6285184516184 | Putrianastasya744@gmail.com
+  
+  ## PROFESSIONAL SUMMARY
+  Results-driven AI Implementation & Automation Specialist...
+  
+  ## CORE COMPETENCIES & TECHNICAL SKILLS
+  - AI Implementation & Architecture: Azure AI / OpenAI Integration...
+  - Workflow Automation & Tools: n8n Pipeline Engineering...
+  ...
+  
+  >>> pdf_to_chunks() — 12 chunks with headings (PROFESSIONAL SUMMARY, CORE COMPETENCIES,
+  PROFESSIONAL EXPERIENCE, EDUCATION, LANGUAGES) and per-chunk provenance metadata.
+  ```
+- **Note**: First run downloads RapidOCR models (~30MB) for OCR-based text extraction.
+- **Checkpoint**: PDF-to-markdown pipeline works end-to-end. Ready for Phase 2 (upload endpoint + AI extraction).
+
+### Files created (Phase 1.5)
+- `backend/app/services/document_service.py`
+- `backend/scripts/test_docling.py`
+
+### Files modified (Phase 1.5)
+- `backend/pyproject.toml` — moved docling to main deps
+- `backend/uv.lock` — updated lockfile

@@ -12,9 +12,10 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "https://your-project-ref.supabase.co"
     SUPABASE_ANON_KEY: str = "your-anon-public-key"
     SUPABASE_SERVICE_ROLE_KEY: str = "your-service-role-secret-key"
+    SUPABASE_STORAGE_BUCKET: str = "candidate-cvs"
 
     # --- Postgres ---
-    DATABASE_URL: str = "postgresql://postgres:password@db.your-project-ref.supabase.co:5432/postgres"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:password@db.your-project-ref.supabase.co:5432/postgres"
 
     # --- OpenAI ---
     OPENAI_API_KEY: str = "sk-your-openai-api-key"
