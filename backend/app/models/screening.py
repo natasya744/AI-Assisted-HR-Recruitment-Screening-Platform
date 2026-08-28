@@ -30,6 +30,7 @@ class ScreeningResult(Base):
     total_score: Mapped[int] = mapped_column(Integer)
     breakdown: Mapped[dict[str, Any]] = mapped_column(JSONB)
     evidence: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    ai_advice: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

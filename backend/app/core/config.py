@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # --- OpenAI ---
     OPENAI_API_KEY: str = "sk-your-openai-api-key"
-    OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
+    OPENAI_CHAT_MODEL: str = "gpt-5-mini"
 
     # --- Email ---
     EMAIL_TRANSPORT: str = "file"
