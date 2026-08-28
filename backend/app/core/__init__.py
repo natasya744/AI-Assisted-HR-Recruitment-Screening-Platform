@@ -1,1 +1,0 @@
-"""Core package for application-wide configuration and utilities."""

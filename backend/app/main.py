@@ -4,36 +4,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="Backend API for AI-Assisted HR Recruitment Screening Platform",
+    title="AI-Assisted HR Recruitment Screening Platform",
     version="0.1.0",
 )
 
-# Configure Cross-Origin Resource Sharing (CORS)
+allowed_origins = [
+    origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get("/health", tags=["Health"])
-async def health_check() -> dict[str, str]:
-    """Health check endpoint to verify backend service status."""
+@app.get("/health")
+def health():
     return {
         "status": "ok",
-        "app": settings.PROJECT_NAME,
-        "environment": settings.ENVIRONMENT,
+        "app": "AI-Assisted HR Recruitment Screening Platform",
+        "environment": "development",
     }
 
 
-@app.get("/", tags=["Root"])
-async def root() -> dict[str, str]:
-    """Root endpoint providing system status and documentation reference."""
+@app.get("/")
+def root():
     return {
-        "message": settings.PROJECT_NAME,
-        "docs": "/docs",
-        "status": "running",
+        "app": app.title,
+        "version": app.version,
     }
