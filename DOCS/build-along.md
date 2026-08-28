@@ -196,3 +196,107 @@ This guide documents every completed slice, explaining what was built, why, exac
 ### Files modified (Phase 1.5)
 - `backend/pyproject.toml` — moved docling to main deps
 - `backend/uv.lock` — updated lockfile
+
+---
+
+## Phase 2 — Database Models (Separate Tables Design)
+
+### Slice 2.1–2.5: Core Tables with Form/PDF Separation
+- **Outcome**: Eight tables created through a single Alembic migration, with the architecture's key design principle applied: form-submitted data (ground truth) and AI-extracted PDF data live in **separate, aligned tables**.
+  - `backend/app/models/`: `job.py`, `candidate.py` (now with phone/location/linkedin contact fields), `application.py`, `candidate_profile_form.py`, `candidate_profile_pdf.py`, `screening.py`, `hr_decision.py`, `audit_log.py`.
+  - `candidate_profiles_form` stores an immutable JSONB snapshot of exactly what the candidate typed.
+  - `candidate_profiles_pdf` stores AI extraction with `provenance` tags and an `alignment_check` JSONB recording per-field comparison against the form ground truth. Mismatches are flagged for HR — never auto-corrected.
+  - `backend/alembic/versions/0001_create_core_tables.py`: constraint names match the `Base` naming convention so future autogenerate diffs stay stable.
+  - `backend/app/repositories/`: `job_repository.py`, `candidate_repository.py`, `application_repository.py`, `profile_repository.py`, `audit_repository.py`.
+- **Why**: The form is the candidate's own claim; the PDF extraction is the AI's reading of the same person. Keeping them in separate tables lets validation compare the two sources directly, which is the anti-hallucination guard. One-to-one from `applications` (unique `application_id` FK) keeps every row traceable to one application.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run --locked --no-sync ruff check app alembic
+  uv run alembic upgrade head
+  ```
+- **Observable Result**: `Running upgrade -> 0001` and all eight tables (`jobs`, `candidates`, `applications`, `candidate_profiles_form`, `candidate_profiles_pdf`, `screening_results`, `hr_decisions`, `audit_logs`) exist in Supabase `public` schema.
+- **Checkpoint**: Migration applies cleanly against the live Supabase project; table list verified via `information_schema`.
+
+---
+
+## Phase 3 — Application Intake
+
+### Slice 3.1–3.4: Submit → Store → Snapshot
+- **Outcome**: A candidate can apply through the website; the CV lands in the private bucket; the DB records candidate + application + form snapshot + audit entry.
+  - `backend/app/schemas/`: `JobCreate`/`JobRead`, `ApplicationFormFields` (with local email regex + empty-string-to-None normalization — no new dependency), `ApplicationRead`, `ApplicationListItem`.
+  - `backend/app/services/application_service.py`: PDF validation (content type, `.pdf` extension, `%PDF-` magic bytes, 10 MB cap, filename sanitization), storage upload under `{application_id}/{filename}`, candidate upsert by email, `candidate_profiles_form` snapshot, `APPLICATION_SUBMITTED` audit entry — all in one transaction with rollback on failure.
+  - `backend/app/services/storage_service.py`: `upload_cv_bytes()` + fixed `ensure_candidate_cvs_bucket()` (supabase-py raises 404 instead of returning empty on `get_bucket`).
+  - `backend/app/api/routes/`: `POST/GET /api/jobs`, `POST/GET /api/applications` (multipart via `Annotated` Form/File params).
+  - `frontend/src/lib/types.ts` + `frontend/src/pages/apply/ApplyForm.tsx`: real public form — job dropdown from the API, contact fields, PDF attachment with client-side type/size checks, success screen with application reference, typed error handling.
+- **Why**: This is the workflow entry point. The form snapshot is what makes the later alignment check possible: without an immutable record of what the candidate claimed, there is nothing to compare the AI extraction against.
+- **Exact Commands**:
+  ```bash
+  # Terminal 1 — Backend
+  cd backend && uv run --locked --no-sync uvicorn app.main:app --port 8001
+
+  # Terminal 2 — Frontend
+  cd frontend && pnpm dev
+
+  # Verify
+  uv run --locked --no-sync ruff check app scripts
+  pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+- **Observable Result**:
+  - `POST /api/applications` with the fictional sample CV returns `201` with `status: APPLICATION_SUBMITTED`; the PDF appears in the private `candidate-cvs` bucket; `candidate_profiles_form` holds the exact form values; `audit_logs` has `APPLICATION_SUBMITTED`.
+  - Rejects: wrong file type → `400`, unknown job → `404`, oversized file → `413`.
+  - Browser walkthrough: job dropdown auto-populated, form submitted, success screen shown, second application visible in `GET /api/applications`.
+- **Checkpoint**: Full loop verified live — row + Storage object + form snapshot + audit row, twice (API and browser).
+
+---
+
+## Phase 4 — Document Processing & AI Extraction
+
+### Slice 4.1: pypdf Plain Text Extraction
+- **Outcome**: Added `pdf_to_text()` to `document_service.py` using pypdf for fast, lightweight plain-text extraction — no model downloads, no OCR overhead.
+  - [`backend/app/services/document_service.py`](../backend/app/services/document_service.py): New `pdf_to_text()` function accepts `str | Path | bytes`, uses `pypdf.PdfReader` to extract text from every page, returns newline-joined string.
+  - Lives alongside existing docling `pdf_to_markdown()` and `pdf_to_chunks()` — not a replacement.
+  - pypdf 5.4.0 was already approved and added to `pyproject.toml` dependencies.
+- **Why**: Docling is great for hierarchical markdown extraction but is heavy (~30MB OCR model download on first run, slower). pypdf handles the common "just give me the raw text" case ~10× faster with zero setup.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run --locked --no-sync python -c "
+  from app.services.document_service import pdf_to_text
+  text = pdf_to_text('../samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf')
+  print(len(text))
+  "
+  ```
+- **Observable Result**: `4226` characters of clean text extracted from the sample CV. Works with file paths and raw bytes.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app/services/document_service.py
+  ```
+- **Checkpoint**: `document_service.py` has three extraction modes: `pdf_to_text()` (pypdf, fast/plain), `pdf_to_markdown()` (docling, structured markdown), `pdf_to_chunks()` (docling + hierarchical chunks). All three pass through the same `str | Path | bytes` interface.
+
+### Slice 4.2: Extraction Prompt, Output Schema & Provider Adapter
+- **Outcome**: Created the structured extraction pipeline — prompt templates, Pydantic output schema, and the OpenAI provider adapter. All OpenAI SDK types are isolated within `app/providers/`.
+  - [`backend/app/ai/schemas/candidate_profile.py`](../backend/app/ai/schemas/candidate_profile.py): `CandidateProfileExtracted` (top-level: name, email, phone, location, linkedin, summary, skills, experience years, certifications, languages) + `WorkExperienceEntry` (title, company, start/end date) + `EducationEntry` (degree, institution, field).
+  - [`backend/app/ai/prompts/resume_extraction.py`](../backend/app/ai/prompts/resume_extraction.py): `RESUME_EXTRACTION_SYSTEM_PROMPT` — instructions + field list + 6 anti-hallucination rules; `RESUME_EXTRACTION_USER_PROMPT` — template with `{cv_text}` placeholder.
+  - [`backend/app/providers/resume_extractor.py`](../backend/app/providers/resume_extractor.py): `extract_resume(cv_text)` → `ExtractionResult` (profile, success, error). Creates OpenAI client, calls chat completions with `response_format={"type": "json_object"}`, validates output through Pydantic. Catches HTTP/network errors, JSON decode errors, and schema validation errors — all return `ExtractionResult(success=False, error=...)`.
+- **Why**: The boundary is strict: `providers/resume_extractor.py` is the only module that imports from `openai`. The rest of the app consumes `CandidateProfileExtracted` (a plain Pydantic model) and `ExtractionResult` — no SDK types leak beyond this file.
+- **Exact Commands** (prerequisite: valid `OPENAI_API_KEY` in `backend/.env`):
+  ```bash
+  cd backend
+  uv run --locked --no-sync python -c "
+  from app.services.document_service import pdf_to_text
+  from app.providers.resume_extractor import extract_resume
+  text = pdf_to_text('../samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf')
+  result = extract_resume(text)
+  if result.success:
+      print(result.profile.model_dump_json(indent=2))
+  else:
+      print('Error:', result.error)
+  "
+  ```
+- **Observable Result**: With a valid API key, the sample CV produces a complete `CandidateProfileExtracted` with name, email, phone, location, skills, experience, work history, education, and languages — all structured and validated. Without a key, returns `ExtractionResult(success=False, error=...)` cleanly.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app/ai app/providers
+  ```
+- **Checkpoint**: Extraction prompt, schema, and provider adapter are wired. OpenAI SDK types are sealed inside `app/providers/`. The pipeline `pdf_to_text()` → `extract_resume()` → `CandidateProfileExtracted` is operational and fails safely.

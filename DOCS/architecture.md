@@ -113,7 +113,7 @@ This is the full life of one application, from submission to closure, numbered i
 3. **Store** — the CV PDF is uploaded to the private bucket; only the path + metadata are kept in the DB (never the binary).
 4. **Extract text** — the document service downloads the CV and pulls plain text from the PDF.
 5. **AI extraction** — the extract adapter sends the text to OpenAI with a narrow prompt and a strict JSON schema.
-6. **Validate output** — the 3-layer pipeline (schema → business rules → deterministic merge) verifies and tags the profile.
+6. **Validate output** — the 3-layer pipeline (schema → business rules → deterministic merge + form alignment) verifies and tags the profile.
 7. **Score** — the screening engine computes a deterministic score, breakdown, and evidence against the job's requirements.
 8. **Review** — HR opens the dossier: profile, score breakdown, evidence, and audit history.
 9. **Decide** — HR clicks Approve or Reject (with notes). The state machine allows no further transitions.
@@ -242,7 +242,7 @@ flowchart TD
 
 - **Layer 1 — Pydantic:** strict schema and types. Malformed output never reaches the domain.
 - **Layer 2 — Business rules:** plausible human bounds only (e.g. experience 0–50 years, normalized education, non-empty skills). Implausible values are rejected, not silently clamped.
-- **Layer 3 — Deterministic merge:** fields the model missed are filled by deterministic parsing of the CV text. Every field carries a provenance tag (`ai` / `deterministic` / `manual`) so HR always knows its origin.
+- **Layer 3 — Deterministic merge + form alignment:** fields the model missed are filled by deterministic parsing of the CV text. Every field carries a provenance tag (`ai` / `deterministic` / `manual`) so HR always knows its origin. Extracted identity fields (name, email, phone, location, LinkedIn) are then compared against the form-submitted ground truth; mismatches are recorded in `alignment_check` and shown to HR — never auto-corrected.
 
 The screening engine consumes only validated profiles. It contains zero AI.
 
@@ -252,11 +252,14 @@ The screening engine consumes only validated profiles. It contains zero AI.
 
 Postgres is the source of truth. Binaries live in Storage; the DB holds references.
 
+**Key design principle:** Form-submitted data (ground truth) and AI-extracted PDF data are stored in **separate tables**. The form data serves as a validation baseline to detect AI hallucination during the 3-layer validation pipeline.
+
 ```mermaid
 erDiagram
     JOB ||--o{ APPLICATION : receives
     CANDIDATE ||--o{ APPLICATION : submits
-    APPLICATION ||--o| CANDIDATE_PROFILE : has
+    APPLICATION ||--o| CANDIDATE_PROFILE_FORM : has
+    APPLICATION ||--o| CANDIDATE_PROFILE_PDF : has
     APPLICATION ||--o| SCREENING_RESULT : is scored by
     APPLICATION ||--o| HR_DECISION : is finalized by
     APPLICATION ||--o{ AUDIT_LOG : is traced by
@@ -274,6 +277,9 @@ erDiagram
         uuid id PK
         string full_name
         string email
+        string phone
+        string location
+        string linkedin_url
     }
     APPLICATION {
         uuid id PK
@@ -284,12 +290,20 @@ erDiagram
         jsonb cv_metadata
         datetime applied_at
     }
-    CANDIDATE_PROFILE {
+    CANDIDATE_PROFILE_FORM {
+        uuid id PK
+        uuid application_id FK
+        jsonb form_data
+        datetime created_at
+    }
+    CANDIDATE_PROFILE_PDF {
         uuid id PK
         uuid application_id FK
         jsonb extracted_data
         jsonb provenance
         string extraction_status
+        jsonb alignment_check
+        datetime created_at
     }
     SCREENING_RESULT {
         uuid id PK
@@ -314,6 +328,12 @@ erDiagram
         datetime created_at
     }
 ```
+
+**Table responsibilities:**
+
+- `candidates` — the candidate identity record, seeded from the website form (name, email, phone, location, LinkedIn). This is the **ground truth**.
+- `candidate_profiles_form` — immutable snapshot of exactly what the candidate typed in the form.
+- `candidate_profiles_pdf` — everything the AI extracted from the CV PDF, with provenance tags and an `alignment_check` JSONB recording per-field comparison against the form ground truth (match / mismatch / missing). Mismatches are surfaced to HR; they are never auto-corrected and never silently resolved.
 
 Schema changes go through Alembic migrations only — never manual dashboard edits.
 

@@ -1,6 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 
+import pypdf
 from docling.chunking import HierarchicalChunker
 from docling.document_converter import DocumentConverter
 
@@ -20,6 +21,19 @@ def _get_chunker() -> HierarchicalChunker:
     if _chunker is None:
         _chunker = HierarchicalChunker()
     return _chunker
+
+
+def pdf_to_text(source: str | Path | bytes) -> str:
+    if isinstance(source, bytes):
+        reader = pypdf.PdfReader(BytesIO(source))
+    else:
+        reader = pypdf.PdfReader(source)
+    pages: list[str] = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text:
+            pages.append(text)
+    return "\n".join(pages)
 
 
 def pdf_to_markdown(source: str | Path | bytes) -> str:

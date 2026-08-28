@@ -3,9 +3,18 @@ from logging.config import fileConfig
 from sqlalchemy import create_engine, pool
 
 from alembic import context
-
 from app.core.config import settings
 from app.db.base import Base
+from app.models import (
+    Application,
+    AuditLog,
+    Candidate,
+    CandidateProfileForm,
+    CandidateProfilePdf,
+    HRDecision,
+    Job,
+    ScreeningResult,
+)
 
 config = context.config
 

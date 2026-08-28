@@ -39,8 +39,8 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 - [x] **1.1** Create a Supabase project (see `docs/guides/supabase-setup.md`).
 - [x] **1.2** Collect `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (direct/session, not pooler) into `backend/.env`.
 - [x] **1.3** Add Alembic to the backend (**approval needed** for the dep). Configure `alembic/env.py` to read `DATABASE_URL` from `config.py`.
-- [ ] **1.4** Create private Storage bucket `candidate-cvs` (no public access).
-- [ ] **Checkpoint:** `uv run alembic upgrade head` succeeds against an empty schema; an authenticated Storage upload+download round-trips from a script.
+- [x] **1.4** Create private Storage bucket `candidate-cvs` (no public access).
+- [x] **Checkpoint:** `uv run alembic upgrade head` succeeds against an empty schema; an authenticated Storage upload+download round-trips from a script.
 
 ---
 
@@ -48,12 +48,12 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** schema created through Alembic; repositories can persist.
 
-- [ ] **2.1** SQLAlchemy models + first migration: `jobs` (title, `min_experience_years`, `required_skills`, `education_requirements`, `score_weights`, `is_open`).
-- [ ] **2.2** Models: `candidates` (name, email) and `applications` (job FK, candidate FK, `status`, `cv_storage_path`, `cv_metadata`, `applied_at`).
-- [ ] **2.3** Models: `candidate_profiles` (extracted data + provenance), `screening_results` (score, breakdown, evidence).
-- [ ] **2.4** Models: `hr_decisions` and `audit_log`.
-- [ ] **2.5** Repositories: `candidate_repository.py`, `application_repository.py`, `screening_repository.py`, `audit_repository.py`.
-- [ ] **Checkpoint:** one migration applies cleanly; every model round-trips via a quick `uv run python` script.
+- [x] **2.1** SQLAlchemy models + first migration: `jobs` (title, `min_experience_years`, `required_skills`, `education_requirements`, `score_weights`, `is_open`).
+- [x] **2.2** Models: `candidates` (name, email) and `applications` (job FK, candidate FK, `status`, `cv_storage_path`, `cv_metadata`, `applied_at`).
+- [x] **2.3** Models: `candidate_profiles_form` (form-submitted ground-truth snapshot), `candidate_profiles_pdf` (extracted data + provenance + `alignment_check` vs form), `screening_results` (score, breakdown, evidence).
+- [x] **2.4** Models: `hr_decisions` and `audit_log`.
+- [x] **2.5** Repositories: `candidate_repository.py`, `application_repository.py`, `screening_repository.py`, `audit_repository.py`.
+- [x] **Checkpoint:** one migration applies cleanly; every model round-trips via a quick `uv run python` script.
 
 ---
 
@@ -61,11 +61,11 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** a candidate can submit; the CV lands in Storage; the record lands in the DB.
 
-- [ ] **3.1** Schemas (`app/schemas/`): job create/read, application create/read.
-- [ ] **3.2** `application_service.py`: validate PDF type + size, upload to Storage, insert candidate + application, set status `APPLICATION_SUBMITTED`.
-- [ ] **3.3** Routes: `POST /api/jobs`, `GET /api/jobs`, `POST /api/applications` (multipart), `GET /api/applications`.
-- [ ] **3.4** Frontend public form: pick job, name/email, attach PDF, submit, success/error states.
-- [ ] **Checkpoint:** upload a fictional CV → row + Storage object created, `SUBMITTED`.
+- [x] **3.1** Schemas (`app/schemas/`): job create/read, application create/read.
+- [x] **3.2** `application_service.py`: validate PDF type + size, upload to Storage, insert candidate + application, set status `APPLICATION_SUBMITTED`.
+- [x] **3.3** Routes: `POST /api/jobs`, `GET /api/jobs`, `POST /api/applications` (multipart), `GET /api/applications`.
+- [x] **3.4** Frontend public form: pick job, name/email, attach PDF, submit, success/error states.
+- [x] **Checkpoint:** upload a fictional CV → row + Storage object created, `SUBMITTED`.
 
 ---
 
@@ -73,10 +73,10 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** a CV's text becomes a validated structured profile.
 
-- [ ] **4.1** PDF text extraction (**approval needed**: proposed `pypdf==4.3.1` vs local) in `document_service.py`.
-- [ ] **4.2** Adapter under `app/providers/`: extraction prompt (`ai/prompts/resume_extraction.py`) + output schema (`ai/schemas/candidate_profile.py`). OpenAI SDK types stop here.
-- [ ] **4.3** Validation pipeline: Pydantic → business bounds → deterministic merge with provenance tags (`ai`/`deterministic`/`manual`).
-- [ ] **4.4** Wire into the flow: on submit, process → validate → persist `candidate_profiles`; status → `SCREENING`, or `DOCUMENT_PROCESSING_FAILED` → `MANUAL_REVIEW` on failure.
+- [x] **4.1** PDF text extraction (**approval needed**: proposed `pypdf==4.3.1` vs local) in `document_service.py`.
+- [] **4.2** Adapter under `app/providers/`: extraction prompt (`ai/prompts/resume_extraction.py`) + output schema (`ai/schemas/candidate_profile.py`). OpenAI SDK types stop here.
+- [ ] **4.3** Validation pipeline: Pydantic → business bounds → deterministic merge with provenance tags (`ai`/`deterministic`/`manual`) → alignment check of extracted identity fields against the form ground truth (mismatches recorded, HR-facing, never auto-corrected).
+- [ ] **4.4** Wire into the flow: on submit, process → validate → persist `candidate_profiles_pdf`; status → `SCREENING`, or `DOCUMENT_PROCESSING_FAILED` → `MANUAL_REVIEW` on failure.
 - [ ] **4.5** Frontend: show extracted profile (skills, experience, education) on the detail view.
 - [ ] **Checkpoint:** fictional CV → structured profile appears with provenance markers; a broken PDF routes to manual review.
 
