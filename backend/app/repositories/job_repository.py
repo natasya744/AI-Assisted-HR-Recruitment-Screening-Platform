@@ -10,6 +10,7 @@ from app.schemas.job import JobCreate
 def create(db: Session, data: JobCreate) -> Job:
     job = Job(
         title=data.title,
+        description=data.description,
         min_experience_years=data.min_experience_years,
         required_skills=data.required_skills,
         education_requirements=data.education_requirements,

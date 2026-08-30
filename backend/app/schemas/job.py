@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class JobCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None)
     min_experience_years: int = Field(default=0, ge=0, le=50)
     required_skills: list[str] = Field(default_factory=list)
     education_requirements: list[str] = Field(default_factory=list)
@@ -17,6 +18,7 @@ class JobRead(BaseModel):
 
     id: uuid.UUID
     title: str
+    description: str | None = None
     min_experience_years: int
     required_skills: list[str]
     education_requirements: list[str]

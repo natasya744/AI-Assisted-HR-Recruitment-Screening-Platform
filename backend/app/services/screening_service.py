@@ -75,16 +75,19 @@ def run_ai_advisor(
     if profile_json is None:
         profile_json = profile.model_dump_json(indent=2, exclude_none=True)
 
-    job_description_lines = [
-        f"Required skills: {', '.join(job.required_skills)}",
-        f"Min experience: {job.min_experience_years} years",
-        f"Education: {', '.join(job.education_requirements)}",
-        f"Score weights: {json.dumps(job.score_weights)}",
-    ]
+    if job.description:
+        job_description = job.description
+    else:
+        job_description = (
+            f"Required skills: {', '.join(job.required_skills)}\n"
+            f"Min experience: {job.min_experience_years} years\n"
+            f"Education: {', '.join(job.education_requirements)}\n"
+            f"Score weights: {json.dumps(job.score_weights)}"
+        )
 
     result = get_screening_advice(
         job_title=job.title,
-        job_description="\n".join(job_description_lines),
+        job_description=job_description,
         candidate_profile=profile_json,
     )
 

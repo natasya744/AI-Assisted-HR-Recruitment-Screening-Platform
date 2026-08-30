@@ -300,3 +300,59 @@ This guide documents every completed slice, explaining what was built, why, exac
   uv run --locked --no-sync ruff check app/ai app/providers
   ```
 - **Checkpoint**: Extraction prompt, schema, and provider adapter are wired. OpenAI SDK types are sealed inside `app/providers/`. The pipeline `pdf_to_text()` → `extract_resume()` → `CandidateProfileExtracted` is operational and fails safely.
+
+---
+
+### Slice 4.3: AI Screening Advisor — Prompt, Schema, Provider & Service
+- **Outcome**: Added an advisory screening layer alongside the deterministic screening engine. The AI advisor evaluates the extracted profile against job requirements and flags which qualifications are verified, missing, or unverifiable. The deterministic engine remains the authoritative score source; the advisor output is purely informational for HR.
+  - [`backend/app/core/config.py`](../backend/app/core/config.py): Changed `OPENAI_CHAT_MODEL` to `gpt-5-mini`.
+  - [`backend/app/models/screening.py`](../backend/app/models/screening.py): Added `ai_advice JSONB` column to `ScreeningResult`.
+  - [`backend/alembic/versions/0002_add_ai_advice_to_screening.py`](../backend/alembic/versions/0002_add_ai_advice_to_screening.py): Migration 0002 adds the column.
+  - [`backend/app/ai/schemas/ai_advice.py`](../backend/app/ai/schemas/ai_advice.py): `RequirementAssessment` (requirement, category, status, evidence, reason) + `AdvisorOutput` (overall_classification, per_requirement, additional_qualifications, advisor_confidence).
+  - [`backend/app/ai/prompts/screening_advisor.py`](../backend/app/ai/prompts/screening_advisor.py): Concise 10-rule prompt — no hallucination, evidence-based assessments, strict YES/NO/PARTIAL_MATCH/NOT_FOUND.
+  - [`backend/app/providers/screening_advisor.py`](../backend/app/providers/screening_advisor.py): `get_screening_advice(job_title, job_description, candidate_profile)` returns `ScreeningAdviceResult` (advice, success, error). OpenAI SDK types sealed here.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): `run_deterministic_screening()` — rule-based scoring (skills match, experience years, education, certifications) with configurable weights from `job.score_weights`. `run_ai_advisor()` — callable separately, returns the advisor dict for storage.
+  - [`backend/app/repositories/screening_repository.py`](../backend/app/repositories/screening_repository.py): `get_by_application()` and `update_ai_advice()` for the `screening_results` table.
+- **Why**: The architectural principle "AI assists, never controls" is preserved — the deterministic engine is the authoritative source of truth for scores. The AI advisor provides per-requirement evidence and confidence flags to help HR make informed decisions. Both are stored in `screening_results` and surfaced on the HR dashboard.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  # Migrate
+  uv run alembic upgrade head
+
+  # Verify lint
+  uv run --locked --no-sync ruff check app/ai app/providers app/services app/repositories
+  ```
+- **Observable Result**: Migration 0002 applies cleanly. `screening_results` table now has an `ai_advice` JSONB column (default `{}`).
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app/ai app/providers app/services app/repositories
+  ```
+- **Checkpoint**: AI screening advisor is fully wired — deterministic scoring runs synchronously, advisor runs separately (async or on-demand), both are stored per application. HR dashboard can render deterministic score + evidence + advisor per-requirement assessment.
+
+---
+
+### Slice 4.4: Job Description Free-Text Field
+- **Outcome**: Added a free-text `description` column to the `jobs` table so HR can paste the full job posting. The AI advisor reads this rich text instead of the assembled structured fields, giving it full context (responsibilities, preferred qualifications, work arrangement, etc.). The structured fields (`required_skills`, `education_requirements`, `min_experience_years`, `score_weights`) remain for the deterministic screening engine.
+  - [`backend/alembic/versions/0003_add_job_description.py`](../backend/alembic/versions/0003_add_job_description.py): Migration adds `description TEXT` column to `jobs`.
+  - [`backend/app/models/job.py`](../backend/app/models/job.py): Added `description: Mapped[str | None] = mapped_column(Text, nullable=True)`.
+  - [`backend/app/schemas/job.py`](../backend/app/schemas/job.py): Added `description: str | None` to both `JobCreate` and `JobRead`.
+  - [`backend/app/repositories/job_repository.py`](../backend/app/repositories/job_repository.py): Passes `data.description` when creating a job.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): `run_ai_advisor()` now uses `job.description` if present; falls back to structured-field assembly for backward compatibility.
+- **Why**: A full job description gives the AI advisor much richer context — it can evaluate against responsibilities, preferred qualifications, soft skills, work arrangements, and other details that structured fields can't capture. The deterministic engine still uses structured fields for reproducible scoring.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run alembic upgrade head
+  |
+  Create a job with description:
+  curl -X POST http://localhost:8001/api/jobs \
+    -H "Content-Type: application/json" \
+    -d '{"title": "Administration Staff", "description": "We are looking for an Administration Staff to manage office operations.\\n\\nRequired:\\n- Bachelor degree in any field\\n- 2+ years admin experience\\n- Microsoft Office proficiency\\n- English B2 or higher\\n- SAP experience preferred\\n- Strong organizational skills", "min_experience_years": 2, "required_skills": ["Microsoft Office", "SAP"], "education_requirements": ["Bachelor"], "score_weights": {"skills": 30, "experience": 30, "education": 20, "other": 20}}'
+  ```
+- **Observable Result**: Migration 0003 applies cleanly. `POST /api/jobs` accepts `description` in the body. The AI advisor receives the full description text when evaluating candidates against this job.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app alembic
+  ```
+- **Checkpoint**: Jobs now carry a full free-text description. When HR creates a job and pastes the complete posting, the AI advisor evaluates candidates against it. Existing jobs without a description still work — the advisor falls back to structured fields.

@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import Boolean, Integer, String, text
+from sqlalchemy import Boolean, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +17,7 @@ class Job(Base):
         server_default=text("gen_random_uuid()"),
     )
     title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     min_experience_years: Mapped[int] = mapped_column(Integer, default=0)
     required_skills: Mapped[list[Any]] = mapped_column(JSONB, default=list)
     education_requirements: Mapped[list[Any]] = mapped_column(JSONB, default=list)
