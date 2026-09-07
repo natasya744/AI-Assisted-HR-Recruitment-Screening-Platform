@@ -45,7 +45,7 @@ def extract_resume(cv_text: str) -> ExtractionResult:
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.1,
+            temperature=1,
         )
     except Exception as exc:
         return ExtractionResult(profile=None, success=False, error=str(exc))

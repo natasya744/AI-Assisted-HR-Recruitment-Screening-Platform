@@ -356,3 +356,39 @@ This guide documents every completed slice, explaining what was built, why, exac
   uv run --locked --no-sync ruff check app alembic
   ```
 - **Checkpoint**: Jobs now carry a full free-text description. When HR creates a job and pastes the complete posting, the AI advisor evaluates candidates against it. Existing jobs without a description still work — the advisor falls back to structured fields.
+
+---
+
+### Slice 4.5: Modular Testing Playground & Pipeline Verification
+- **Outcome**: Created a modular testing playground in `playground/` reflecting the backend application architecture:
+  - [`playground/config.py`](../playground/config.py): Environment paths and settings boundary.
+  - [`playground/data/fixtures.py`](../playground/data/fixtures.py): Sample job criteria, candidate form ground truth, and validated offline fixtures.
+  - [`playground/services/document_service.py`](../playground/services/document_service.py): PDF-to-Markdown conversion using Docling and Markdown file loader.
+  - [`playground/services/alignment_service.py`](../playground/services/alignment_service.py): Anti-hallucination check comparing form submission against extracted PDF data.
+  - [`playground/services/scoring_service.py`](../playground/services/scoring_service.py): Deterministic rule-based math and breakdown scoring.
+  - [`playground/providers/extraction_provider.py`](../playground/providers/extraction_provider.py): Resume extractor adapter with provenance tracking and fallback.
+  - [`playground/providers/advisor_provider.py`](../playground/providers/advisor_provider.py): Screening advisor adapter with requirement evaluations.
+  - [`playground/pipeline.py`](../playground/pipeline.py): End-to-end pipeline orchestrator connecting intake $\rightarrow$ extraction $\rightarrow$ alignment $\rightarrow$ scoring $\rightarrow$ advice.
+  - [`playground/main.py`](../playground/main.py): Modular CLI runner with commands for each individual module (`convert`, `extract`, `align`, `score`, `advise`, `all`).
+- **Why**: Allows isolated, unit-style and end-to-end testing of each processing layer before persisting to the database or rendering on the frontend, while verifying how all modules communicate.
+- **Exact Commands**:
+  ```bash
+  # Convert PDF to Markdown only
+  uv run --directory backend --locked --no-sync python ../playground/main.py convert --pdf ../samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf
+
+  # Run Anti-Hallucination Alignment Check
+  uv run --directory backend --locked --no-sync python ../playground/main.py align
+
+  # Run Deterministic Rule-Based Scoring Engine
+  uv run --directory backend --locked --no-sync python ../playground/main.py score
+
+  # Run Full End-to-End Pipeline
+  uv run --directory backend --locked --no-sync python ../playground/main.py all
+  ```
+- **Observable Result**:
+  - `convert` extracts clean Markdown from `Natasya_AI_Specialist_AutoGroup_Resume.pdf` via Docling.
+  - `align` checks all 5 identity fields between form and PDF without auto-correcting.
+  - `score` computes exact mathematical score breakdown (100/100).
+  - `all` orchestrates the complete flow from intake to final screening dossier.
+  - `uv run --directory backend --locked --no-sync ruff check ../playground app` passes with 0 errors.
+- **Checkpoint**: All processing modules are isolated, modular, and verified to communicate as designed. Ready to wire directly into backend routes and services.

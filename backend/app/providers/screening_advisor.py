@@ -53,7 +53,7 @@ def get_screening_advice(
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.1,
+            temperature=1,
         )
     except Exception as exc:
         return ScreeningAdviceResult(advice=None, success=False, error=str(exc))

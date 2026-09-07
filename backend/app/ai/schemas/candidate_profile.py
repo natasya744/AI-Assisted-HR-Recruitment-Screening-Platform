@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class EducationEntry(BaseModel):
@@ -42,3 +42,12 @@ class CandidateProfileExtracted(BaseModel):
     languages: list[str] = Field(
         default_factory=list, description="Languages spoken"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_none_to_empty_list(cls, data: dict) -> dict:
+        if isinstance(data, dict):
+            for field in ("skills", "work_experience", "education", "certifications", "languages"):
+                if data.get(field) is None:
+                    data[field] = []
+        return data

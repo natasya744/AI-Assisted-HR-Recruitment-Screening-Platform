@@ -48,3 +48,4 @@ samples/*
 !samples/.gitkeep
 frontend/node_modules/
 frontend/dist/
+playground/output_*.md

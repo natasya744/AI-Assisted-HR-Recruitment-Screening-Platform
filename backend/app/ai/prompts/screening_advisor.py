@@ -30,5 +30,11 @@ SCREENING_ADVISOR_USER_PROMPT = (
     "Candidate Profile:\n{candidate_profile}\n\n"
     "Assess each qualification from the job description against the candidate profile. "
     "Output a JSON object with overall_classification, per_requirement assessments, "
-    "additional_qualifications, and advisor_confidence."
+    "additional_qualifications, and advisor_confidence.\n\n"
+    "JSON SHAPE RULES (strict):\n"
+    "- per_requirement MUST be a flat JSON array of objects. Each object has: "
+    "requirement (string), category (string), status (string), evidence (string), reason (string). "
+    "Do NOT group objects by category into a dict.\n"
+    "- additional_qualifications MUST be a JSON array of strings, not a dict.\n"
+    "- advisor_confidence MUST be a string: one of HIGH, MEDIUM, LOW. Not a number."
 )

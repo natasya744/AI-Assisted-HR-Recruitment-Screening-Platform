@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class RequirementAssessment(BaseModel):
@@ -30,3 +30,30 @@ class AdvisorOutput(BaseModel):
     advisor_confidence: str = Field(
         description="One of: HIGH, MEDIUM, LOW"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize(cls, data: dict) -> dict:
+        if not isinstance(data, dict):
+            return data
+        # per_requirement: flatten a category-keyed dict into a flat list
+        pr = data.get("per_requirement")
+        if isinstance(pr, dict):
+            flat = []
+            for items in pr.values():
+                if isinstance(items, list):
+                    flat.extend(items)
+            data["per_requirement"] = flat
+        # additional_qualifications: flatten a dict of lists into a flat list of strings
+        aq = data.get("additional_qualifications")
+        if isinstance(aq, dict):
+            flat = []
+            for items in aq.values():
+                if isinstance(items, list):
+                    flat.extend(str(x) for x in items)
+            data["additional_qualifications"] = flat
+        # advisor_confidence: coerce float/int to string
+        conf = data.get("advisor_confidence")
+        if isinstance(conf, (int, float)):
+            data["advisor_confidence"] = str(conf)
+        return data
