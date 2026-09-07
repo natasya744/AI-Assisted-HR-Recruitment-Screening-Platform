@@ -3,10 +3,11 @@
 Orchestrates communication across services and providers:
   1. Document Processing: PDF -> Markdown (via DocumentService) or load pre-converted
   2. AI Extraction: Markdown -> CandidateProfileExtracted (via ExtractionProvider)
-  3. Anti-Hallucination: Form Ground Truth vs. PDF Profile (via AlignmentService)
-  4. Deterministic Scoring: Rule-based mathematical scoring (via ScoringService)
-  5. AI Advice: Requirement-level assessment (via AdvisorProvider)
-  6. Consolidated Dossier: Assembles final candidate dossier matching database models
+  3. Validation Pipeline: business bounds, deterministic merge, field-level provenance
+  4. Anti-Hallucination: Form Ground Truth vs. PDF Profile (via AlignmentService)
+  5. Deterministic Scoring: Rule-based mathematical scoring (via ScoringService)
+  6. AI Advice: Requirement-level assessment (via AdvisorProvider)
+  7. Consolidated Dossier: Assembles final candidate dossier matching database models
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from playground.providers.extraction_provider import extract_profile_with_proven
 from playground.services.alignment_service import check_profile_alignment
 from playground.services.document_service import convert_pdf_to_markdown, load_markdown
 from playground.services.scoring_service import calculate_deterministic_score
+from playground.services.validation_service import run_validation_pipeline
 
 
 def run_screening_pipeline(
@@ -71,16 +73,29 @@ def run_screening_pipeline(
     edu_degree = profile.education[0].degree if profile.education else "N/A"
     print(f"   Extracted Education:  {edu_degree}\n")
 
-    # --- Stage 3: Anti-Hallucination Alignment Check ---
-    alignment = check_profile_alignment(form_data, profile)
-    for field, res in alignment["fields"].items():
-        sym = "✅" if res["status"] == "MATCH" else "⚠️"
-        f_val, p_val = res["form_value"], res["pdf_value"]
-        print(f"   {sym} {field:12}: {res['status']} [Form: '{f_val}' | PDF: '{p_val}']")
-    align_summary = "ALL MATCHED" if not alignment["has_mismatch"] else "MISMATCH FLAGGED FOR HR"
-    print(f"   Alignment Summary: {align_summary}\n")
+    # --- Stage 2.5: Validation Pipeline (business bounds + deterministic merge + provenance) ---
+    validated = run_validation_pipeline(profile, provenance, form_data)
+    profile = validated["profile"]
+    field_provenance = validated["field_provenance"]
+    business_warnings = validated["business_warnings"]
+    alignment = validated["alignment_check"]
 
-    # --- Stage 4: Deterministic Rule-Based Scoring ---
+    print(f"   🔍 Validation Pipeline:")
+    if business_warnings:
+        print(f"      ⚠️ Business Bounds: {len(business_warnings)} warning(s)")
+        for w in business_warnings:
+            print(f"         • {w}")
+    else:
+        print(f"      ✅ Business Bounds: clean")
+    print(f"      📋 Field Provenance (source tags):")
+    sorted_fields = sorted(field_provenance.items(), key=lambda x: x[0])
+    for field, tag in sorted_fields:
+        sym = "🧠" if tag == "ai" else "⚙️" if tag == "deterministic" else "🔧" if tag == "manual" else "⬜"
+        print(f"         {sym} {field:30} → {tag}")
+    print(f"      ✅ Alignment: {'ALL MATCHED' if not alignment or not alignment['has_mismatch'] else 'MISMATCH FLAGGED FOR HR'}")
+    print()
+
+    # --- Stage 5: Deterministic Rule-Based Scoring ---
     scoring = calculate_deterministic_score(job, profile)
     bd = scoring["breakdown"]
     print(f"   DETERMINISTIC SCORE: {scoring['total_score']} / {scoring['max_score']}")
@@ -100,7 +115,7 @@ def run_screening_pipeline(
         f"(Present: {bd['other']['has_certifications']})\n"
     )
 
-    # --- Stage 5: AI Screening Advisor ---
+    # --- Stage 6: AI Screening Advisor ---
     advice = get_screening_advice_dossier(job, profile, force_mock=force_mock)
     verdict = advice.get("overall_classification")
     conf = advice.get("advisor_confidence")
@@ -113,12 +128,14 @@ def run_screening_pipeline(
         print(f"   {sym} [{req['status']:13}] {r_text}... -> {req['reason']}")
     print()
 
-    # --- Stage 6: Consolidated Dossier ---
+    # --- Stage 7: Consolidated Dossier ---
     dossier = {
         "job": {"title": job["title"]},
         "candidate_form": form_data,
         "extracted_pdf_profile": profile.model_dump(),
         "provenance": provenance,
+        "field_provenance": field_provenance,
+        "business_warnings": business_warnings,
         "alignment_check": alignment,
         "deterministic_screening": scoring,
         "ai_advice": advice,

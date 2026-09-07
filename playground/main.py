@@ -33,6 +33,7 @@ from playground.services.document_service import (  # noqa: E402
     load_markdown,
 )
 from playground.services.scoring_service import calculate_deterministic_score  # noqa: E402
+from playground.services.validation_service import run_validation_pipeline  # noqa: E402
 
 
 def main() -> None:
@@ -77,6 +78,13 @@ def main() -> None:
     # Command: advise
     sub_advise = subparsers.add_parser("advise", help="Run AI qualification advisor")
     sub_advise.add_argument("--mock", action="store_true", help="Force offline fixture")
+
+    # Command: validate
+    sub_validate = subparsers.add_parser("validate", help="Run validation pipeline (bounds + merge + provenance)")
+    sub_validate.add_argument(
+        "--fixture", action="store_true", default=True, help="Use fixture profile (default)"
+    )
+    sub_validate.add_argument("--md", type=str, help="Extract from Markdown first, then validate")
 
     args = parser.parse_args()
 
@@ -134,6 +142,48 @@ def main() -> None:
             print(f"  {sym} [{req['status']}] {req['requirement']}")
             print(f"     Evidence: {req['evidence']}")
             print(f"     Reason:   {req['reason']}")
+        print()
+
+    elif command == "validate":
+        print("--- Testing Module: Validation Pipeline (Phase 4.3) ---")
+
+        if args.md:
+            content = load_markdown(args.md)
+            profile, raw_prov = extract_profile_with_provenance(content, force_mock=False)
+            print(f"   Extracted profile via live AI: {profile.full_name}")
+        else:
+            profile = FIXTURE_EXTRACTED_PROFILE
+            raw_prov = {f: "fixture_ai" for f in [
+                "full_name", "email", "phone", "location", "linkedin_url",
+                "professional_summary", "skills", "total_experience_years",
+                "work_experience", "education", "certifications", "languages",
+            ]}
+            print(f"   Using fixture profile: {profile.full_name}")
+
+        validated = run_validation_pipeline(profile, raw_prov, DEFAULT_FORM_DATA)
+        fp = validated["field_provenance"]
+        warnings = validated["business_warnings"]
+        alignment = validated["alignment_check"]
+
+        print(f"\n   📋 Field-Level Provenance:")
+        for field in sorted(fp):
+            tag = fp[field]
+            sym = "🧠" if tag == "ai" else "⚙️" if tag == "deterministic" else "⬜" if tag == "missing" else "🔧"
+            print(f"      {sym} {field:30} → {tag}")
+
+        print(f"\n   ⚠️ Business Warnings ({len(warnings)}):")
+        if warnings:
+            for w in warnings:
+                print(f"      • {w}")
+        else:
+            print(f"      (none — clean)")
+
+        print(f"\n   🔄 Alignment:")
+        if alignment:
+            for field, detail in alignment["fields"].items():
+                sym = "✅" if detail["status"] == "MATCH" else "⚠️"
+                print(f"      {sym} {field:12}: {detail['status']}")
+            print(f"      Has Mismatch: {alignment['has_mismatch']}")
         print()
 
     elif command == "all":
