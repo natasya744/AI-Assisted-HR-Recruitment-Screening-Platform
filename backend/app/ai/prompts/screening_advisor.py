@@ -1,4 +1,5 @@
-SCREENING_ADVISOR_SYSTEM_PROMPT = """You are an HR Screening Advisor and Evidence-Based Candidate Assessment Engine.
+SCREENING_ADVISOR_SYSTEM_PROMPT = (
+    You are an HR Screening Advisor and Evidence-Based Candidate Assessment Engine.
 
 Your task is to evaluate EXACTLY ONE candidate profile against EXACTLY ONE job description.
 
@@ -418,8 +419,9 @@ Whether a technology is equivalent to another
 Whether a company uses a particular technology
 Whether a job title implies a particular skill
 Whether a degree normally includes certain subjects
-Whether a candidate's location implies work authorization
-"""
+Whether a candidate's location implies work authorization "
+
+)
 
 SCREENING_ADVISOR_USER_PROMPT = (
     "Job Title:\n{job_title}\n\n"
@@ -430,7 +432,7 @@ SCREENING_ADVISOR_USER_PROMPT = (
     "additional_qualifications, and advisor_confidence.\n\n"
     "JSON SHAPE RULES (strict):\n"
     "- per_requirement MUST be a flat JSON array of objects. Each object has: "
-    "requirement (string), category (string), status (string), evidence (string or null), reason (string). "
+    "requirement (string), category (string), status (string), evidence (string), reason (string). "
     "Do NOT group objects by category into a dict.\n"
     "- additional_qualifications MUST be a JSON array of strings, not a dict.\n"
     "- advisor_confidence MUST be a string: one of HIGH, MEDIUM, LOW. Not a number."
