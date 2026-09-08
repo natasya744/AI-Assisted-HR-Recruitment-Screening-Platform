@@ -41,7 +41,9 @@ def main() -> None:
         description="Modular Playground for AI-Assisted HR Recruitment Screening Platform",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    subparsers = parser.add_subparsers(dest="command", help="Module or stage to execute")
+    subparsers = parser.add_subparsers(
+        dest="command", help="Module or stage to execute"
+    )
 
     # Command: all
     sub_all = subparsers.add_parser(
@@ -52,25 +54,46 @@ def main() -> None:
         action="store_true",
         help="Start from PDF conversion rather than pre-converted markdown",
     )
-    sub_all.add_argument("--pdf", type=str, default=str(DEFAULT_PDF_PATH), help="PDF path")
-    sub_all.add_argument("--md", type=str, default=str(DEFAULT_MD_PATH), help="Markdown path")
     sub_all.add_argument(
-        "--out", type=str, default=str(DEFAULT_OUTPUT_MD), help="Output markdown path if using PDF"
+        "--pdf", type=str, default=str(DEFAULT_PDF_PATH), help="PDF path"
     )
-    sub_all.add_argument("--mock", action="store_true", help="Force offline fixtures for AI steps")
+    sub_all.add_argument(
+        "--md", type=str, default=str(DEFAULT_MD_PATH), help="Markdown path"
+    )
+    sub_all.add_argument(
+        "--out",
+        type=str,
+        default=str(DEFAULT_OUTPUT_MD),
+        help="Output markdown path if using PDF",
+    )
+    sub_all.add_argument(
+        "--mock", action="store_true", help="Force offline fixtures for AI steps"
+    )
 
     # Command: convert
-    sub_conv = subparsers.add_parser("convert", help="Convert PDF to Markdown via Docling")
-    sub_conv.add_argument("--pdf", type=str, default=str(DEFAULT_PDF_PATH), help="PDF path")
-    sub_conv.add_argument("--out", type=str, default=str(DEFAULT_OUTPUT_MD), help="Output path")
+    sub_conv = subparsers.add_parser(
+        "convert", help="Convert PDF to Markdown via Docling"
+    )
+    sub_conv.add_argument(
+        "--pdf", type=str, default=str(DEFAULT_PDF_PATH), help="PDF path"
+    )
+    sub_conv.add_argument(
+        "--out", type=str, default=str(DEFAULT_OUTPUT_MD), help="Output path"
+    )
 
     # Command: extract
-    sub_ext = subparsers.add_parser("extract", help="Extract structured profile from Markdown")
-    sub_ext.add_argument("--md", type=str, default=str(DEFAULT_MD_PATH), help="Markdown path")
+    sub_ext = subparsers.add_parser(
+        "extract", help="Extract structured profile from Markdown"
+    )
+    sub_ext.add_argument(
+        "--md", type=str, default=str(DEFAULT_MD_PATH), help="Markdown path"
+    )
     sub_ext.add_argument("--mock", action="store_true", help="Force offline fixture")
 
     # Command: align
-    subparsers.add_parser("align", help="Run anti-hallucination alignment check (Form vs PDF)")
+    subparsers.add_parser(
+        "align", help="Run anti-hallucination alignment check (Form vs PDF)"
+    )
 
     # Command: score
     subparsers.add_parser("score", help="Run deterministic rule-based scoring math")
@@ -80,18 +103,27 @@ def main() -> None:
     sub_advise.add_argument("--mock", action="store_true", help="Force offline fixture")
 
     # Command: validate
-    sub_validate = subparsers.add_parser("validate", help="Run validation pipeline (bounds + merge + provenance)")
-    sub_validate.add_argument(
-        "--fixture", action="store_true", default=True, help="Use fixture profile (default)"
+    sub_validate = subparsers.add_parser(
+        "validate", help="Run validation pipeline (bounds + merge + provenance)"
     )
-    sub_validate.add_argument("--md", type=str, help="Extract from Markdown first, then validate")
+    sub_validate.add_argument(
+        "--fixture",
+        action="store_true",
+        default=True,
+        help="Use fixture profile (default)",
+    )
+    sub_validate.add_argument(
+        "--md", type=str, help="Extract from Markdown first, then validate"
+    )
 
     args = parser.parse_args()
 
     # Default to 'all' if no subcommand provided
     command = args.command or "all"
 
-    print(f"\n[Playground] Mode: {command} | Configured Model: {settings.OPENAI_CHAT_MODEL}")
+    print(
+        f"\n[Playground] Mode: {command} | Configured Model: {settings.OPENAI_CHAT_MODEL}"
+    )
 
     if command == "convert":
         print("--- Testing Module: Document Processing (PDF -> Markdown) ---")
@@ -115,7 +147,9 @@ def main() -> None:
             sym = "✅" if detail["status"] == "MATCH" else "⚠️"
             form_v = detail["form_value"]
             pdf_v = detail["pdf_value"]
-            print(f"  {sym} {field:12}: {detail['status']} (Form: '{form_v}' | PDF: '{pdf_v}')")
+            print(
+                f"  {sym} {field:12}: {detail['status']} (Form: '{form_v}' | PDF: '{pdf_v}')"
+            )
         print(f"\nHas Mismatches: {res['has_mismatch']}\n")
 
     elif command == "score":
@@ -132,13 +166,15 @@ def main() -> None:
     elif command == "advise":
         print("--- Testing Module: AI Screening Advisor ---")
         profile = FIXTURE_EXTRACTED_PROFILE
-        advice = get_screening_advice_dossier(DEFAULT_SAMPLE_JOB, profile, force_mock=args.mock)
+        advice = get_screening_advice_dossier(
+            DEFAULT_SAMPLE_JOB, profile, force_mock=args.mock
+        )
         verdict = advice.get("overall_classification")
         conf = advice.get("advisor_confidence")
         print(f"\nClassification: {verdict} (Confidence: {conf})")
         print("Requirements Assessment:")
         for req in advice.get("per_requirement", []):
-            sym = "✅" if req["status"] == "YES" else "⚠️"
+            sym = "✅" if req["status"] in ("YES", "MATCH") else "⚠️"
             print(f"  {sym} [{req['status']}] {req['requirement']}")
             print(f"     Evidence: {req['evidence']}")
             print(f"     Reason:   {req['reason']}")
@@ -149,15 +185,29 @@ def main() -> None:
 
         if args.md:
             content = load_markdown(args.md)
-            profile, raw_prov = extract_profile_with_provenance(content, force_mock=False)
+            profile, raw_prov = extract_profile_with_provenance(
+                content, force_mock=False
+            )
             print(f"   Extracted profile via live AI: {profile.full_name}")
         else:
             profile = FIXTURE_EXTRACTED_PROFILE
-            raw_prov = {f: "fixture_ai" for f in [
-                "full_name", "email", "phone", "location", "linkedin_url",
-                "professional_summary", "skills", "total_experience_years",
-                "work_experience", "education", "certifications", "languages",
-            ]}
+            raw_prov = {
+                f: "fixture_ai"
+                for f in [
+                    "full_name",
+                    "email",
+                    "phone",
+                    "location",
+                    "linkedin_url",
+                    "professional_summary",
+                    "skills",
+                    "total_experience_years",
+                    "work_experience",
+                    "education",
+                    "certifications",
+                    "languages",
+                ]
+            }
             print(f"   Using fixture profile: {profile.full_name}")
 
         validated = run_validation_pipeline(profile, raw_prov, DEFAULT_FORM_DATA)
@@ -165,10 +215,18 @@ def main() -> None:
         warnings = validated["business_warnings"]
         alignment = validated["alignment_check"]
 
-        print(f"\n   📋 Field-Level Provenance:")
+        print("\n   📋 Field-Level Provenance:")
         for field in sorted(fp):
             tag = fp[field]
-            sym = "🧠" if tag == "ai" else "⚙️" if tag == "deterministic" else "⬜" if tag == "missing" else "🔧"
+            sym = (
+                "🧠"
+                if tag == "ai"
+                else "⚙️"
+                if tag == "deterministic"
+                else "⬜"
+                if tag == "missing"
+                else "🔧"
+            )
             print(f"      {sym} {field:30} → {tag}")
 
         print(f"\n   ⚠️ Business Warnings ({len(warnings)}):")
@@ -176,9 +234,9 @@ def main() -> None:
             for w in warnings:
                 print(f"      • {w}")
         else:
-            print(f"      (none — clean)")
+            print("      (none — clean)")
 
-        print(f"\n   🔄 Alignment:")
+        print("\n   🔄 Alignment:")
         if alignment:
             for field, detail in alignment["fields"].items():
                 sym = "✅" if detail["status"] == "MATCH" else "⚠️"
@@ -187,7 +245,9 @@ def main() -> None:
         print()
 
     elif command == "all":
-        input_file = Path(args.pdf) if getattr(args, "use_pdf", False) else Path(args.md)
+        input_file = (
+            Path(args.pdf) if getattr(args, "use_pdf", False) else Path(args.md)
+        )
         out_file = Path(args.out) if getattr(args, "use_pdf", False) else None
         force_mock = getattr(args, "mock", False)
 

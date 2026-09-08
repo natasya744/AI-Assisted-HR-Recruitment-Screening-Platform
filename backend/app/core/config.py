@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     EMAIL_OUT_DIR: str = "./data/outbound-emails"
 
     # --- Server ---
-    ALLOWED_ORIGINS: str = "http://localhost:5174"
+    ALLOWED_ORIGINS: str = "http://localhost:5174,http://localhost:5175"
 
 
 settings = Settings()

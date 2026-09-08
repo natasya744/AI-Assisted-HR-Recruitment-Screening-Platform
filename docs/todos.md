@@ -76,9 +76,9 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 - [x] **4.1** PDF text extraction (**approval needed**: proposed `pypdf==4.3.1` vs local) in `document_service.py`.
 - [x] **4.2** Adapter under `app/providers/`: extraction prompt (`ai/prompts/resume_extraction.py`) + output schema (`ai/schemas/candidate_profile.py`). OpenAI SDK types stop here.
 - [x] **4.3** Validation pipeline: Pydantic → business bounds → deterministic merge with provenance tags (`ai`/`deterministic`/`manual`) → alignment check of extracted identity fields against the form ground truth (mismatches recorded, HR-facing, never auto-corrected).
-- [ ] **4.4** Wire into the flow: on submit, process → validate → persist `candidate_profiles_pdf`; status → `SCREENING`, or `DOCUMENT_PROCESSING_FAILED` → `MANUAL_REVIEW` on failure.
-- [ ] **4.5** Frontend: show extracted profile (skills, experience, education) on the detail view.
-- [ ] **Checkpoint:** fictional CV → structured profile appears with provenance markers; a broken PDF routes to manual review.
+- [x] **4.4** Wire into the flow: on submit, process → validate → persist `candidate_profiles_pdf`; status → `SCREENING`, or `DOCUMENT_PROCESSING_FAILED` → `MANUAL_REVIEW` on failure.
+- [x] **4.5** Frontend: show extracted profile (skills, experience, education) on the detail view.
+- [x] **Checkpoint:** fictional CV → structured profile appears with provenance markers; a broken PDF routes to manual review.
 
 ---
 
@@ -86,10 +86,10 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** an explainable, reproducible score.
 
-- [ ] **5.1** `screening_service.py`: pure rule-based scoring (experience points, per-skill match, education match) from `score_weights`. Zero AI.
-- [ ] **5.2** Produce total score + per-category breakdown + evidence (matched snippets).
-- [ ] **5.3** Persist `screening_results`; status → `HR_REVIEW`. Block recompute after an HR decision.
-- [ ] **5.4** Frontend: score panel with expandable breakdown + evidence.
+- [x] **5.1** `screening_service.py`: pure rule-based scoring (experience points, per-skill match, education match) from `score_weights`. Zero AI.
+- [x] **5.2** Produce total score + per-category breakdown + evidence (matched snippets).
+- [x] **5.3** Persist `screening_results`; status → `HR_REVIEW`. Block recompute after an HR decision.
+- [x] **5.4** Frontend: score panel with expandable breakdown + evidence.
 - [ ] **Checkpoint:** a strong and a weak CV get visibly different, explainable scores.
 
 ---

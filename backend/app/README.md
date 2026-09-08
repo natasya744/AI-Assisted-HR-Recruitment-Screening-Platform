@@ -14,7 +14,7 @@
 
 ---
 
-## Implemented (Phases 0–4)
+## Implemented (Phases 0–5)
 
 | Area | Status |
 |------|--------|
@@ -29,6 +29,11 @@
 | AI screening advisor: prompt + schema + provider + `ai_advice` column | ✅ |
 | Job free-text `description` field for AI context | ✅ |
 | Deterministic screening service (skills/experience/education/certs) | ✅ |
+| Wire screening into intake flow → persist `screening_results`, status → `HR_REVIEW` | ✅ |
+| Qualification verdict (Qualified / Not qualified, ≥60% of max) + score panel with expandable breakdown & evidence | ✅ |
+| Block screening recompute after an HR decision | ✅ |
+| Fallback zero-score screening result when scoring engine fails | ✅ |
+| Auto-backfill screening for pre-existing applications on detail view | ✅ |
 
 ---
 
@@ -36,10 +41,6 @@
 
 | Phase | Task | Key Files to Touch |
 |-------|------|-------------------|
-| **4.3–4.4** | Wire extraction into intake flow: on submit → extract → validate → merge with provenance → alignment check vs form → persist `candidate_profiles_pdf` + set status `SCREENING` / `MANUAL_REVIEW` | `application_service.py`, `document_service.py`, new validation/merge logic, `profile_repository.py` |
-| **4.5** | Frontend: display extracted profile (skills, experience, education) on detail view | `frontend/src/pages/hr/Review.tsx` |
-| **5** | Deterministic screening engine: produce score + breakdown + evidence snippets; persist `screening_results`; status → `HR_REVIEW` | `screening_service.py`, `screening_repository.py` |
-| **5.4** | Frontend: score panel with expandable breakdown + evidence | `frontend/src/pages/hr/Review.tsx` |
 | **6** | HR dashboard: applications table (filter/sort), detail tabs (Profile / Screening / History), approve/reject with confirm | `hr` routes, new dashboard components |
 | **7** | Email notifications on decision (file transport MVP) | `email_service.py`, `audit_repository.py` |
 | **8** | Excel export (`openpyxl`) | `export_service.py`, export route, frontend button |

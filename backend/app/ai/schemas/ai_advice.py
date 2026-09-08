@@ -7,17 +7,19 @@ class RequirementAssessment(BaseModel):
         description="One of: REQUIRED, PREFERRED, RESPONSIBILITY, OTHER_CONDITION"
     )
     status: str = Field(
-        description="One of: YES, NO, PARTIAL_MATCH, NOT_FOUND"
+        description="One of: MATCH, PARTIAL_MATCH, NOT_MATCH, NOT_FOUND, CONFLICTING_INFORMATION"
     )
-    evidence: str = Field(description="Exact text from the CV supporting this assessment")
+    evidence: str | None = Field(
+        default=None,
+        description="Exact text from the CV supporting this assessment, or null if no evidence",
+    )
     reason: str = Field(description="Short explanation of the assessment")
 
 
 class AdvisorOutput(BaseModel):
     overall_classification: str = Field(
         description=(
-            "One of: QUALIFIED, NOT_QUALIFIED, "
-            "POTENTIALLY_QUALIFIED, INSUFFICIENT_INFORMATION"
+            "One of: QUALIFIED, NOT_QUALIFIED, POTENTIALLY_QUALIFIED, INSUFFICIENT_INFORMATION"
         )
     )
     per_requirement: list[RequirementAssessment] = Field(
@@ -27,9 +29,7 @@ class AdvisorOutput(BaseModel):
         default_factory=list,
         description="Qualifications the job requires but are not verifiable from the CV",
     )
-    advisor_confidence: str = Field(
-        description="One of: HIGH, MEDIUM, LOW"
-    )
+    advisor_confidence: str = Field(description="One of: HIGH, MEDIUM, LOW")
 
     @model_validator(mode="before")
     @classmethod

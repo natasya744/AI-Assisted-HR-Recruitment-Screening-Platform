@@ -392,3 +392,125 @@ This guide documents every completed slice, explaining what was built, why, exac
   - `all` orchestrates the complete flow from intake to final screening dossier.
   - `uv run --directory backend --locked --no-sync ruff check ../playground app` passes with 0 errors.
 - **Checkpoint**: All processing modules are isolated, modular, and verified to communicate as designed. Ready to wire directly into backend routes and services.
+
+---
+
+### Slice 4.6: Wire Processing into the Application Flow (4.4)
+- **Outcome**: A submitted application is now processed synchronously inside the intake request: PDF text → AI extraction → 3-layer validation → persisted `candidate_profiles_pdf` → status `SCREENING`. Failures route to `DOCUMENT_PROCESSING_FAILED` with an empty failed profile row + audit entry so HR can inspect.
+  - [`backend/app/services/validation_service.py`](../backend/app/services/validation_service.py): Ported the playground's Phase 4.3 pipeline into the real service layer — `validate_business_bounds()`, `deterministic_merge()` (field-level provenance tags), `check_profile_alignment()` (form ground truth vs PDF, MISMATCH is never auto-corrected), `run_validation_pipeline()`.
+  - [`backend/app/services/application_service.py`](../backend/app/services/application_service.py): `submit_application()` now calls `process_application()` after the `APPLICATION_SUBMITTED` commit — `document_service.pdf_to_text()` → `resume_extractor.extract_resume()` → `run_validation_pipeline()` → `profile_repository.create_pdf_profile()`; status → `SCREENING`, audit `EXTRACTED`. Any failure → `_mark_processing_failed()` → status `DOCUMENT_PROCESSING_FAILED`, audit `DOCUMENT_PROCESSING_FAILED` with the error, empty failed profile.
+  - [`backend/app/repositories/application_repository.py`](../backend/app/repositories/application_repository.py): `get_with_job_and_candidate()` for the detail view.
+  - [`backend/app/schemas/application.py`](../backend/app/schemas/application.py): `CandidateInfo`, `PdfProfileRead`, `ApplicationDetail` response models.
+  - [`backend/app/api/routes/applications.py`](../backend/app/api/routes/applications.py): `GET /api/applications/{id}` returns the dossier (application + candidate + form snapshot + pdf profile with provenance + alignment check).
+- **Why**: Phase 4.1–4.3 built the primitives; this slice connects them to the real intake endpoint so candidates actually reach `SCREENING` automatically, or `MANUAL_REVIEW` when the document is unreadable.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run --locked --no-sync ruff check app scripts
+
+  # Valid fictional CV → status SCREENING
+  curl -X POST http://localhost:8001/api/applications \
+    -F "job_id=<job-id>" -F "full_name=Natasha Putri" -F "email=natasha.putri@example.com" \
+    -F "cv=@samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf;type=application/pdf"
+
+  # Truncated PDF (passes magic-byte check, unreadable) → status DOCUMENT_PROCESSING_FAILED
+  printf '%%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%%%EOF' > /tmp/broken.pdf
+  curl -X POST http://localhost:8001/api/applications \
+    -F "job_id=<job-id>" -F "full_name=Broken Sally" -F "email=broken.sally@example.com" \
+    -F "cv=@/tmp/broken.pdf;type=application/pdf"
+
+  curl http://localhost:8001/api/applications/<id>   # dossier JSON
+  ```
+- **Observable Result**: Valid CV returns `201` with `status: SCREENING`; the detail JSON carries `pdf_profile.extracted_data` (skills/work/education), per-field `provenance` (`ai`/`deterministic`/`missing`), and `alignment_check` (email/name/phone MISMATCH flags). A truncated PDF returns `201` with `status: DOCUMENT_PROCESSING_FAILED` and an empty failed profile. `audit_logs` gains `EXTRACTED` (success) or `DOCUMENT_PROCESSING_FAILED` (with `error`) rows.
+- **Verification**: `uv run --locked --no-sync ruff check app scripts` clean; live curl walkthrough of both paths.
+
+### Slice 4.7: Frontend Profile Detail View (4.5)
+- **Outcome**: The HR review page (`/hr/review/:id`) now shows the extracted profile with provenance markers, an alignment-mismatch callout, and a distinct manual-review state; the dashboard lists clickable applications.
+  - [`frontend/src/lib/types.ts`](../frontend/src/lib/types.ts): `ApplicationListItem`, `CandidateInfo`, `WorkExperience`, `Education`, `ExtractedProfile`, `ProfileProvenance`, `AlignmentCheck`, `PdfProfile`, `ApplicationDetail`.
+  - [`frontend/src/lib/errors.ts`](../frontend/src/lib/errors.ts): Extracted the shared `getErrorMessage()` used by all pages.
+  - [`frontend/src/components/StatusBadge.tsx`](../frontend/src/components/StatusBadge.tsx): status pill (colour per state).
+  - [`frontend/src/components/ProvenanceBadge.tsx`](../frontend/src/components/ProvenanceBadge.tsx): provenance pill (`AI` / `Derived` / `AI approx` / `Missing`).
+  - [`frontend/src/pages/hr/Review.tsx`](../frontend/src/pages/hr/Review.tsx): detail view — header with name/job/status, alignment mismatch callout, provenance legend, then Extracted profile / Summary / Skills / Work experience / Education / Certifications / Languages sections (each showing field-level provenance badges). `DOCUMENT_PROCESSING_FAILED` → "manual review required" callout + "No extracted profile" placeholder.
+  - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): applications table (candidate, job, applied date, status badge) with rows linking to the review page.
+  - [`frontend/src/pages/apply/ApplyForm.tsx`](../frontend/src/pages/apply/ApplyForm.tsx): now imports the shared error helper.
+- **Why**: This is exactly what HR needs to trust the AI output — the field origins (`provenance`) and the flag when an extracted identity field disagrees with what the candidate typed.
+- **Exact Commands**:
+  ```bash
+  cd frontend
+  pnpm tsc --noEmit && pnpm lint && pnpm build
+  pnpm dev   # then open http://localhost:5174/hr → click a SCREENING row
+  ```
+- **Observable Result**: `/hr` shows the applications table with status badges; clicking a `SCREENING` application opens the profile detail with the extracted name/skills/work/education, per-field provenance pills, and the amber alignment callout listing mismatch details (form vs PDF). Clicking a `DOCUMENT_PROCESSING_FAILED` application shows the "manual review required" red callout.
+- **Verification**: `pnpm tsc --noEmit`, `pnpm lint`, `pnpm build` all pass; Playwright walkthrough of the checkpoint — 14/14 checks (dashboard lists rows, provenance legend, skills/work/education sections with counts, alignment mismatch surfaced, failed-status manual-review view, public apply page still renders).
+
+- **Checkpoint (Phase 4)**: A fictional CV → structured profile with provenance markers (`SCREENING`); a broken PDF → `DOCUMENT_PROCESSING_FAILED` with a manual-review callout. Both verified live through the browser.
+
+---
+
+## Phase 4.8 — Wire Deterministic Screening + HR Qualification Summary
+
+### Slice 4.8: Screening result & qualified/not-qualified verdict end-to-end
+- **Outcome**: The automatic flow now produces a transparent screening verdict, and the HR UI surfaces it. Previously the `screening_results` row was **never created** (the scoring engine existed but was not called), so the dashboard could only show extractions.
+  - [`backend/app/services/application_service.py`](../backend/app/services/application_service.py): `process_application()` now runs `run_deterministic_screening()` after a successful extraction — persists `screening_results`, moves status to `HR_REVIEW`, and appends a `SCREENED` audit entry.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): added `assess_qualification(total_score, score_weights)` → `{max_score, passing_score, is_qualified, classification}`. Verdict = reach > 60% of the summed score weights (no new schema column; derived deterministically at read time).
+  - [`backend/app/schemas/application.py`](../backend/app/schemas/application.py): added `ScreeningSummary` (list) + `ScreeningResultRead` (detail); `ApplicationListItem` and `ApplicationDetail` now carry `screening`.
+  - [`backend/app/repositories/application_repository.py`](../backend/app/repositories/application_repository.py): `list_with_details()` outer-joins `ScreeningResult` and returns the `Job`/`Candidate` models so the list endpoint can compute the verdict. No migration required.
+  - [`backend/app/api/routes/applications.py`](../backend/app/api/routes/applications.py): list & detail routes build the verdict from `total_score` + `job.score_weights` and return the screening summary/result.
+- **Why**: The client-brief's Gap 3/4 (inconsistent screening + opaque scores) requires a **score + breakdown + why**, and the architecture's Step 7 says "score computed" before review. Without wiring the engine, HR had nothing to review. The verdict is derived (never stored differently per call) so it is inspectable and reproducible.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run --locked --no-sync ruff check app scripts
+  uv run uvicorn app.main:app --reload --port 8001
+
+  cd frontend
+  pnpm dev
+  ```
+- **Observable Result**:
+  - A freshly submitted application now returns `status: HR_REVIEW` and the detail JSON has `screening: {total_score, max_score, passing_score, is_qualified, classification, breakdown, evidence}`.
+  - `GET /api/applications` returns a `screening` summary per row (`{total_score, max_score, passing_score, is_qualified, classification}`).
+  - Frontend `/hr` dashboard: stat cards (Total / Qualified / Not qualified), and a clean, proportional table with Candidate, Job, Score (progress bar + `score/max`), Verdict badge (Qualified / Not qualified), Status, and Applied date.
+  - Frontend `/hr/review/:id`: a "Screening result" card sits between the header and the extracted profile — big score, threshold bar, per-category breakdown bars (Skills/Experience/Education/Other), and a "Why this verdict" block listing matched/missing skills, experience vs minimum, and certifications.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app scripts   # clean
+  pnpm tsc --noEmit && pnpm lint && pnpm build        # all green
+  ```
+- **Checkpoint**: Extraction and screening are now both part of the intake flow; HR can see *why* a candidate is qualified or not in one place. Pre-existing rows created before this slice have no `screening_results` row and show as "Not screened" until reprocessed.
+
+### Slice 4.9: Phase 5 close-out — recompute guard + expandable score panel
+- **Outcome**: Completed the remaining Phase 5 checklist items.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): `run_deterministic_screening()` now refuses to recompute once an `HRDecision` exists for the application — raises `ScreeningError` instead of silently overwriting (blocks re-scoring after an HR decision).
+  - [`backend/app/repositories/hr_decision_repository.py`](../backend/app/repositories/hr_decision_repository.py): new `get_by_application()` used by the guard.
+  - [`frontend/src/components/ui/collapsible.tsx`](../frontend/src/components/ui/collapsible.tsx): shadcn-style `Collapsible` / `CollapsibleTrigger` / `CollapsibleContent` wrapping `@base-ui/react/collapsible` (already a dependency — no new package).
+  - [`frontend/src/components/ScreeningSummaryCard.tsx`](../frontend/src/components/ScreeningSummaryCard.tsx): the score panel is now **expandable** — total score + verdict + threshold bar stay visible, and the per-category breakdown + "Why this verdict" evidence collapse/expand behind a toggle (default open so HR still sees the reason at a glance).
+- **Why**: 5.3 keeps the audit/state invariants (a decision is terminal; the score behind it must not change). 5.4 gives HR the transparent "score + breakdown + evidence" without crowding the page.
+- **Exact Commands**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check app scripts
+  cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+- **Observable Result**: `ruff` clean; `tsc`/`lint`/`build` green. On the review page the "Screening result" card collapses/expands its breakdown + evidence; attempting to re-score a decided application raises a clear error instead of overwriting.
+- **Verification**: backend lint + frontend typecheck/lint/build all pass (no automated test suites per policy).
+- **Checkpoint**: Phase 5 is functionally complete. Remaining: the Phase 5 checkpoint (a strong vs weak CV showing visibly different scores) is a live-browser/cloud verification that needs Supabase + OpenAI credentials, and belongs with the Phase 9 end-to-end walkthrough.
+
+---
+
+## Phase 5 Fix — Screening Verdict Always Surfaces
+
+### Slice 4.10: Screening failure isolation + backfill + always-visible reason
+- **Outcome**: Fixed the case where HR clicked an application and only saw the extracted profile with **no qualification reason**.
+  - **Root cause found**: in `process_application`, `screening_service.run_deterministic_screening()` sat inside the same `try/except Exception` as extraction. Any screening exception (including the recompute-guard `ScreeningError`) triggered `db.rollback()` → `_mark_processing_failed()` → `DOCUMENT_PROCESSING_FAILED` with **no `screening_results` row**, so `detail.screening` was always `null` and the frontend rendered nothing.
+  - [`backend/app/services/application_service.py`](../backend/app/services/application_service.py): `process_application()` now commits extraction first (status `SCREENING`), then runs screening in its own `try`. A `ScreeningError` is ignored; any other failure persists a zero-score **fallback** result so a verdict always exists.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): added `create_fallback_screening()` (score 0, error in `evidence`, `screening_failed: true`) and `screen_application()` (recompute/backfill from stored `extracted_data`, respects the HR-decision guard).
+  - [`backend/app/services/application_service.py`](../backend/app/services/application_service.py): added `ensure_application_screened()` — called by the detail route so pre-existing rows created before screening was wired get a verdict computed on first open.
+  - [`backend/app/api/routes/applications.py`](../backend/app/api/routes/applications.py): `GET /api/applications/{id}` now backfills screening before building the response.
+  - [`frontend/src/components/ScreeningSummaryCard.tsx`](../frontend/src/components/ScreeningSummaryCard.tsx): removed the collapsible wrapper — the **score breakdown and "Why this verdict"** (matched/missing skills, experience, certifications) are now always visible; a failed-screening error block is shown when applicable.
+  - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): column widths rebalanced and job titles clamped so rows look proportional at any width.
+- **Why**: The whole point of the deterministic engine is transparent, explainable results. A single broad `except` silently deleted that explanation for whole application cohorts; the fix guarantees HR always sees *a* verdict and the reason behind it.
+- **Exact Commands**:
+  - `cd backend && uv run --locked --no-sync ruff check app scripts`
+  - `cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build`
+- **Observable Result**: opening any application with a completed extraction now shows the "Screening result" card with a verdict, the threshold bar, per-category breakdown, and the reason block. Pre-existing rows backfill on first open. A scoring-engine failure yields a red "Screening error" note instead of silently losing the row.
+- **Verification**: backend lint, `tsc`, `lint`, `build` all green.
+- **Checkpoint**: HR always sees *why* a candidate is (or is not) qualified, in the same screen as the extracted profile.

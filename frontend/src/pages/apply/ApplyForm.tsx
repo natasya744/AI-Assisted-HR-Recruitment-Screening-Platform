@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
-import { ApiError } from "@/lib/http";
+import { getErrorMessage } from "@/lib/errors";
 import type { ApplicationCreated, Job } from "@/lib/types";
 
 const MAX_CV_SIZE_BYTES = 10 * 1024 * 1024;
@@ -8,22 +8,6 @@ const MAX_CV_SIZE_BYTES = 10 * 1024 * 1024;
 const inputClasses =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-slate-400 focus:outline-none";
 const labelClasses = "block text-xs font-medium uppercase tracking-wide text-slate-400";
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    const data = error.data as { detail?: unknown } | null;
-    if (data && typeof data.detail === "string") return data.detail;
-    if (data && Array.isArray(data.detail)) {
-      return data.detail
-        .map((item) => (item as { msg?: string }).msg ?? "")
-        .filter(Boolean)
-        .join(", ");
-    }
-    if (error.isNetworkError) return "Cannot reach the server. Please try again.";
-    return error.message;
-  }
-  return error instanceof Error ? error.message : "Something went wrong.";
-}
 
 function validateCv(file: File): string | null {
   const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");

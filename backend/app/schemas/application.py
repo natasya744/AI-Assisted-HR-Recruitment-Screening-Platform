@@ -1,6 +1,7 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
@@ -50,6 +51,26 @@ class ApplicationRead(BaseModel):
     applied_at: datetime
 
 
+class ScreeningSummary(BaseModel):
+    total_score: int | None
+    max_score: int | None
+    passing_score: int | None
+    is_qualified: bool | None
+    classification: str | None
+
+
+class ScreeningResultRead(BaseModel):
+    total_score: int
+    max_score: int
+    passing_score: int
+    is_qualified: bool
+    classification: str
+    breakdown: dict[str, Any]
+    evidence: dict[str, Any]
+    ai_advice: dict[str, Any]
+    created_at: datetime
+
+
 class ApplicationListItem(BaseModel):
     id: uuid.UUID
     status: str
@@ -57,3 +78,33 @@ class ApplicationListItem(BaseModel):
     job_title: str
     candidate_name: str
     candidate_email: str
+    screening: ScreeningSummary | None = None
+
+
+class CandidateInfo(BaseModel):
+    full_name: str
+    email: str
+    phone: str | None
+    location: str | None
+    linkedin_url: str | None
+
+
+class PdfProfileRead(BaseModel):
+    extracted_data: dict[str, Any]
+    provenance: dict[str, Any]
+    extraction_status: str
+    alignment_check: dict[str, Any]
+    created_at: datetime
+
+
+class ApplicationDetail(BaseModel):
+    id: uuid.UUID
+    job_id: uuid.UUID
+    job_title: str
+    candidate: CandidateInfo
+    status: str
+    cv_storage_path: str | None
+    applied_at: datetime
+    form_data: dict[str, Any] | None
+    pdf_profile: PdfProfileRead | None
+    screening: ScreeningResultRead | None = None

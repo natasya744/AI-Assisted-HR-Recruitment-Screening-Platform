@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Application, Candidate, Job
+from app.models import Application, Candidate, Job, ScreeningResult
 
 
 def create(
@@ -33,11 +33,24 @@ def get(db: Session, application_id: uuid.UUID) -> Application | None:
     return db.get(Application, application_id)
 
 
-def list_with_details(db: Session, limit: int = 100) -> list[Any]:
+def get_with_job_and_candidate(
+    db: Session, application_id: uuid.UUID
+) -> tuple[Application, Job, Candidate] | None:
     stmt = (
-        select(Application, Job.title, Candidate.full_name, Candidate.email)
+        select(Application, Job, Candidate)
         .join(Job, Application.job_id == Job.id)
         .join(Candidate, Application.candidate_id == Candidate.id)
+        .where(Application.id == application_id)
+    )
+    return db.execute(stmt).first()
+
+
+def list_with_details(db: Session, limit: int = 100) -> list[Any]:
+    stmt = (
+        select(Application, Job, Candidate, ScreeningResult)
+        .join(Job, Application.job_id == Job.id)
+        .join(Candidate, Application.candidate_id == Candidate.id)
+        .outerjoin(ScreeningResult, ScreeningResult.application_id == Application.id)
         .order_by(Application.applied_at.desc())
         .limit(limit)
     )

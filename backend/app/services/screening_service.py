@@ -6,10 +6,33 @@ from sqlalchemy.orm import Session
 from app.ai.schemas.candidate_profile import CandidateProfileExtracted
 from app.models import Job, ScreeningResult
 from app.providers.screening_advisor import get_screening_advice
+from app.repositories import hr_decision_repository, screening_repository
 
 
 class ScreeningError(Exception):
     pass
+
+
+def assess_qualification(total_score: int, score_weights: dict) -> dict:
+    """Derive a transparent qualified / not-qualified verdict from a score.
+
+    The maximum achievable score is the sum of the job's ``score_weights``.
+    A candidate is considered qualified when they reach 60% of that maximum.
+    Everything is computed deterministically and surfaced to HR so the reason
+    for the verdict is always inspectable.
+    """
+    weights = score_weights or {"skills": 30, "experience": 30, "education": 20, "other": 20}
+    max_score = round(sum(float(v) for v in weights.values()))
+    if max_score <= 0:
+        max_score = 100
+    passing_score = round(max_score * 0.6)
+    is_qualified = total_score >= passing_score
+    return {
+        "max_score": max_score,
+        "passing_score": passing_score,
+        "is_qualified": is_qualified,
+        "classification": "QUALIFIED" if is_qualified else "NOT_QUALIFIED",
+    }
 
 
 def run_deterministic_screening(
@@ -19,6 +42,11 @@ def run_deterministic_screening(
     job: Job,
     profile: CandidateProfileExtracted,
 ) -> ScreeningResult:
+    if hr_decision_repository.get_by_application(db, application_id) is not None:
+        raise ScreeningError(
+            "Cannot recompute screening after an HR decision has been made"
+        )
+
     skills = set(s.lower() for s in (profile.skills or []))
     required = set(s.lower() for s in (job.required_skills or []))
     matched = skills & required
@@ -100,6 +128,82 @@ def run_ai_advisor(
         "advisor_confidence": "LOW",
         "error": result.error,
     }
+
+
+def create_fallback_screening(
+    db: Session,
+    *,
+    application_id: uuid.UUID,
+    job: Job,
+    error: str,
+) -> ScreeningResult:
+    """Create a zero-score ScreeningResult when the scoring engine itself fails.
+
+    This ensures HR always sees a verdict (even if the verdict is "no score
+    could be computed") rather than missing data and confusion.
+    """
+    weights = job.score_weights or {"skills": 30, "experience": 30, "education": 20, "other": 20}
+    breakdown = {
+        "skills": {"score": 0, "max": weights.get("skills", 30), "matched": []},
+        "experience": {"score": 0, "max": weights.get("experience", 30), "years": 0},
+        "education": {"score": 0, "max": weights.get("education", 20)},
+        "other": {"score": 0, "max": weights.get("other", 20)},
+    }
+    evidence = {
+        "error": error,
+        "matched_skills": [],
+        "missing_skills": job.required_skills or [],
+        "experience_years": 0,
+        "min_required_experience": job.min_experience_years,
+        "education_requirements": job.education_requirements or [],
+        "certifications": [],
+        "screening_failed": True,
+    }
+    result = ScreeningResult(
+        application_id=application_id,
+        total_score=0,
+        breakdown=breakdown,
+        evidence=evidence,
+    )
+    db.add(result)
+    db.flush()
+    return result
+
+
+def screen_application(
+    db: Session,
+    *,
+    application_id: uuid.UUID,
+    job: Job,
+    extracted_data: dict,
+) -> ScreeningResult:
+    """Return the existing screening result, or compute one from stored data.
+
+    This is the backfill / recompute entry point: it checks the ``rcg`` guard
+    (an ``HRDecision`` exists → raises ``ScreeningError``), then reconstructs a
+    ``CandidateProfileExtracted`` from the stored JSON and runs the
+    deterministic engine.
+    """
+    existing = screening_repository.get_by_application(db, application_id)
+    if existing is not None:
+        return existing
+
+    profile = CandidateProfileExtracted.model_validate(extracted_data)
+    screening_result = run_deterministic_screening(
+        db,
+        application_id=application_id,
+        job=job,
+        profile=profile,
+    )
+
+    advice = run_ai_advisor(
+        job=job,
+        profile=profile,
+    )
+    screening_result.ai_advice = advice
+    db.flush()
+
+    return screening_result
 
 
 def _matches_any_education(

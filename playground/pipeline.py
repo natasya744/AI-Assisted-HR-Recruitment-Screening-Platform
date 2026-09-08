@@ -17,7 +17,6 @@ from typing import Any
 
 from playground.providers.advisor_provider import get_screening_advice_dossier
 from playground.providers.extraction_provider import extract_profile_with_provenance
-from playground.services.alignment_service import check_profile_alignment
 from playground.services.document_service import convert_pdf_to_markdown, load_markdown
 from playground.services.scoring_service import calculate_deterministic_score
 from playground.services.validation_service import run_validation_pipeline
@@ -62,10 +61,14 @@ def run_screening_pipeline(
     print(f"   Markdown ready: {len(markdown_text)} characters\n")
 
     # --- Stage 2: AI Profile Extraction ---
-    profile, provenance = extract_profile_with_provenance(markdown_text, force_mock=force_mock)
+    profile, provenance = extract_profile_with_provenance(
+        markdown_text, force_mock=force_mock
+    )
     skills_preview = ", ".join(profile.skills[:5])
     print(f"   Extracted Name:       {profile.full_name}")
-    print(f"   Extracted Skills:     {len(profile.skills)} skills ({skills_preview}...)")
+    print(
+        f"   Extracted Skills:     {len(profile.skills)} skills ({skills_preview}...)"
+    )
     print(
         f"   Extracted Experience: {profile.total_experience_years} years "
         f"across {len(profile.work_experience)} jobs"
@@ -80,19 +83,29 @@ def run_screening_pipeline(
     business_warnings = validated["business_warnings"]
     alignment = validated["alignment_check"]
 
-    print(f"   🔍 Validation Pipeline:")
+    print("   🔍 Validation Pipeline:")
     if business_warnings:
         print(f"      ⚠️ Business Bounds: {len(business_warnings)} warning(s)")
         for w in business_warnings:
             print(f"         • {w}")
     else:
-        print(f"      ✅ Business Bounds: clean")
-    print(f"      📋 Field Provenance (source tags):")
+        print("      ✅ Business Bounds: clean")
+    print("      📋 Field Provenance (source tags):")
     sorted_fields = sorted(field_provenance.items(), key=lambda x: x[0])
     for field, tag in sorted_fields:
-        sym = "🧠" if tag == "ai" else "⚙️" if tag == "deterministic" else "🔧" if tag == "manual" else "⬜"
+        sym = (
+            "🧠"
+            if tag == "ai"
+            else "⚙️"
+            if tag == "deterministic"
+            else "🔧"
+            if tag == "manual"
+            else "⬜"
+        )
         print(f"         {sym} {field:30} → {tag}")
-    print(f"      ✅ Alignment: {'ALL MATCHED' if not alignment or not alignment['has_mismatch'] else 'MISMATCH FLAGGED FOR HR'}")
+    print(
+        f"      ✅ Alignment: {'ALL MATCHED' if not alignment or not alignment['has_mismatch'] else 'MISMATCH FLAGGED FOR HR'}"
+    )
     print()
 
     # --- Stage 5: Deterministic Rule-Based Scoring ---
@@ -121,7 +134,7 @@ def run_screening_pipeline(
     conf = advice.get("advisor_confidence")
     print(f"   Advisor Verdict:    {verdict} (Confidence: {conf})")
     for req in advice.get("per_requirement", []):
-        is_yes = req["status"] == "YES"
+        is_yes = req["status"] in ("YES", "MATCH")
         is_partial = req["status"] == "PARTIAL_MATCH"
         sym = "✅" if is_yes else ("⚠️" if is_partial else "❌")
         r_text = req["requirement"][:45]
