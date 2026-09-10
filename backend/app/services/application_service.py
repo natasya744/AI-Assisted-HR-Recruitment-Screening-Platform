@@ -4,7 +4,7 @@ from pathlib import PurePosixPath
 
 from sqlalchemy.orm import Session
 
-from app.models import Application
+from app.models import application
 from app.providers import resume_extractor
 from app.repositories import (
     application_repository,
@@ -146,9 +146,7 @@ def process_application(
             detail = result.error or "unknown extraction error"
             raise ApplicationError(f"Extraction failed: {detail}")
 
-        validated = validation_service.run_validation_pipeline(
-            result.profile, form_data=form_data
-        )
+        validated = validation_service.run_validation_pipeline(result.profile, form_data=form_data)
         profile = validated["profile"]
         field_provenance = validated["field_provenance"]
         business_warnings = validated["business_warnings"]

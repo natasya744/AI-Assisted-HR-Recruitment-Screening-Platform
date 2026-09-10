@@ -4,6 +4,7 @@ import Home from "@/pages/Home";
 import ApplyForm from "@/pages/apply/ApplyForm";
 import Dashboard from "@/pages/hr/Dashboard";
 import Review from "@/pages/hr/Review";
+import CvViewer from "@/pages/hr/CvViewer";
 import Jobs from "@/pages/hr/Jobs";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/hr" element={<Dashboard />} />
           <Route path="/hr/jobs" element={<Jobs />} />
           <Route path="/hr/review/:id" element={<Review />} />
+          <Route path="/hr/review/:id/cv" element={<CvViewer />} />
         </Route>
       </Routes>
     </BrowserRouter>

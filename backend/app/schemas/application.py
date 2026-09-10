@@ -78,6 +78,7 @@ class ApplicationListItem(BaseModel):
     job_title: str
     candidate_name: str
     candidate_email: str
+    cv_storage_path: str | None = None
     screening: ScreeningSummary | None = None
 
 

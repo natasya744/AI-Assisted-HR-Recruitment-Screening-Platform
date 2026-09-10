@@ -584,3 +584,34 @@ This guide documents every completed slice, explaining what was built, why, exac
   cd frontend && pnpm tsc --noEmit && pnpm lint
   ```
 - **Checkpoint**: Phase 8 is functionally complete — export endpoint live, download works from the browser, columns match the dashboard, no new dependencies were added (`openpyxl` + `pandas` were already pinned in `pyproject.toml`).
+
+---
+
+## Phase 9 — Original CV PDF Viewer
+
+### Slice 9.1: Backend Proxy Endpoint + Frontend CV Viewer
+
+- **Outcome**: HR can now view the original CV PDF from the dashboard. The bucket is private (per architecture rule), so a backend proxy endpoint serves the PDF bytes. The dashboard rows have a document icon button that opens the CV in a dedicated viewer page at a separate URL.
+
+  - [`backend/app/api/routes/cv.py`](../backend/app/api/routes/cv.py): `GET /api/cv/{application_id}` — looks up `cv_storage_path` from the `applications` table, downloads the file from the private Supabase `candidate-cvs` bucket using the service-role client, and returns PDF bytes with `Content-Disposition: inline` so the browser renders it.
+  - [`backend/app/main.py`](../backend/app/main.py): registered the `cv` router.
+  - [`backend/app/schemas/application.py`](../backend/app/schemas/application.py): added `cv_storage_path: str | None` to `ApplicationListItem`.
+  - [`backend/app/api/routes/hr.py`](../backend/app/api/routes/hr.py): `GET /api/hr/applications` list endpoint now includes `cv_storage_path` in each item.
+  - [`frontend/src/lib/types.ts`](../frontend/src/lib/types.ts): added `cv_storage_path: string | null` to `ApplicationListItem`.
+  - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): added a document icon button next to each candidate name (only shown when `cv_storage_path` is present). Clicking it opens `/hr/review/:id/cv` in a new tab. Uses `e.stopPropagation()` so the row-click navigation to the review page still works.
+  - [`frontend/src/pages/hr/CvViewer.tsx`](../frontend/src/pages/hr/CvViewer.tsx): new page at `/hr/review/:id/cv`. Fetches and renders the PDF in an `<object>` tag. Shows a loading state, an error state with a download fallback, and a "Back to review" link. Includes a "Download PDF" button.
+  - [`frontend/src/App.tsx`](../frontend/src/App.tsx): added `<Route path="/hr/review/:id/cv" element={<CvViewer />} />`.
+
+- **Why**: The architecture document mandates *"The Storage bucket is private; CVs are served only through authenticated backend endpoints."* A proxy endpoint keeps the service-role key server-side and lets the frontend fetch the PDF through the same backend that enforces auth. A dedicated URL per the user request means HR can bookmark, open in a new tab, or print the CV independently.
+
+- **Exact Commands**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check app
+  cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+
+- **Observable Result**: `ruff` clean, `tsc` clean, `lint` clean, `build` succeeds. On the HR dashboard, each row with a CV shows a document icon next to the candidate name; clicking it opens a full-page PDF viewer at `/hr/review/:id/cv` that renders the CV inline with a download button above.
+
+- **Verification**: `cd backend && uv run --locked --no-sync ruff check app` passes; `cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build` all green.
+
+- **Checkpoint**: HR can view the original uploaded CV PDF from the dashboard with a single click, in a separate browser tab — no new dependencies, no exposed secrets, the private bucket stays private.

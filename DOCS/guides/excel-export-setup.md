@@ -21,7 +21,7 @@ From `backend/`:
 
 ```bash
 cd backend
-uv add "openpyxl==3.1.5"
+uv add openpyxl
 uv sync --locked
 ```
 

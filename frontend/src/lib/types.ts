@@ -61,6 +61,7 @@ export type ApplicationListItem = {
   job_title: string;
   candidate_name: string;
   candidate_email: string;
+  cv_storage_path: string | null;
   screening: ScreeningSummary | null;
 };
 

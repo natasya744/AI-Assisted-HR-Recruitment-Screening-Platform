@@ -63,6 +63,7 @@ def list_hr_applications(
             "applied_at": application.applied_at.isoformat(),
             "job_title": job.title,
             "job_id": str(job.id),
+            "cv_storage_path": application.cv_storage_path,
             "candidate_name": candidate.full_name,
             "candidate_email": candidate.email,
             "screening": screening_summary,
