@@ -13,3 +13,22 @@ def get_by_application(
         .filter(HRDecision.application_id == application_id)
         .first()
     )
+
+
+def create(
+    db: Session,
+    *,
+    application_id: uuid.UUID,
+    decision: str,
+    reviewer_email: str,
+    notes: str | None = None,
+) -> HRDecision:
+    entry = HRDecision(
+        application_id=application_id,
+        decision=decision,
+        reviewer_email=reviewer_email,
+        notes=notes,
+    )
+    db.add(entry)
+    db.flush()
+    return entry

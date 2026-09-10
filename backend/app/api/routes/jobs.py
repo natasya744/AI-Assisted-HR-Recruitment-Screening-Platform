@@ -37,3 +37,23 @@ def get_job(job_id: uuid.UUID, db: DbSession) -> JobRead:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return JobRead.model_validate(job)
+
+
+@router.put("/{job_id}", response_model=JobRead)
+def update_job(
+    job_id: uuid.UUID,
+    data: JobCreate,
+    db: DbSession,
+) -> JobRead:
+    job = job_repository.get(db, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job.title = data.title
+    job.description = data.description
+    job.min_experience_years = data.min_experience_years
+    job.required_skills = data.required_skills
+    job.education_requirements = data.education_requirements
+    job.score_weights = data.score_weights
+    db.commit()
+    db.refresh(job)
+    return JobRead.model_validate(job)

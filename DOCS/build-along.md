@@ -514,3 +514,73 @@ This guide documents every completed slice, explaining what was built, why, exac
 - **Observable Result**: opening any application with a completed extraction now shows the "Screening result" card with a verdict, the threshold bar, per-category breakdown, and the reason block. Pre-existing rows backfill on first open. A scoring-engine failure yields a red "Screening error" note instead of silently losing the row.
 - **Verification**: backend lint, `tsc`, `lint`, `build` all green.
 - **Checkpoint**: HR always sees *why* a candidate is (or is not) qualified, in the same screen as the extracted profile.
+
+---
+
+## Phase 6 — HR Dashboard & Decision Gate
+
+### Slice 6.1–6.4: Filtered HR routes, decision endpoint, audit events, frontend decision UI
+- **Outcome**: HR can filter/sort applications, view a dossier with tabs, and make terminal approve/reject decisions that lock the state and are audited.
+  - **6.1** — [`backend/app/api/routes/hr.py`](../backend/app/api/routes/hr.py): `GET /api/hr/applications` with optional `job_id`, `status`, `min_score` query filters; `GET /api/hr/applications/{id}` returns the dossier (application, candidate, screening, pdf_profile, audit history).
+  - **6.2** — `POST /api/hr/applications/{id}/decision` enforces the state machine: validates `APPROVED`/`REJECTED`, checks no prior decision exists (409 Conflict), updates application status, creates an `HRDecision` row. The `hr_decisions` table has a `UNIQUE(application_id)` constraint enforcing one decision per application.
+  - **6.4** — Every decision triggers a `DECISION_APPROVED` or `DECISION_REJECTED` audit event via `audit_repository.append()`, recording reviewer, notes, and previous status.
+  - **6.3** — Frontend:
+    - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): filter bar (job dropdown, status dropdown, min score input) sourcing data from `/api/hr/applications`. Stat cards include a "Decided" counter.
+    - [`frontend/src/pages/hr/Review.tsx`](../frontend/src/pages/hr/Review.tsx): three tabs — Profile (existing extraction view), Screening (score breakdown), History (timeline of audit events with labels). Approve/Reject buttons at the bottom with a confirmation dialog (`ConfirmDialog.tsx`) warning the decision is terminal.
+    - [`frontend/src/components/ConfirmDialog.tsx`](../frontend/src/components/ConfirmDialog.tsx): lightweight modal with approve/reject variant styling.
+- **Why**: Phase 6 closes the HR workflow loop — applications flow from intake → screening → decision, with every transition audited. The decision gate is the terminal state in the state machine, ensuring no re-scoring or re-processing after decision.
+- **Exact Commands**:
+  ```bash
+  # Backend
+  cd backend && uv run --locked --no-sync ruff check app/api/routes/hr.py app/schemas/hr_decision.py app/repositories/hr_decision_repository.py
+  uv run uvicorn app.main:app --reload --port 8001
+
+  # Frontend
+  cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build
+  pnpm dev
+  ```
+- **Observable Result**:
+  - `GET /api/hr/applications?status=HR_REVIEW&min_score=50` returns filtered rows.
+  - `POST /api/hr/applications/{id}/decision` with `{"decision": "APPROVED", "reviewer_email": "hr@example.com"}` returns `201`; a second call returns `409`.
+  - `/hr/review/{id}` shows three tabs, decision buttons at the bottom, and history entries in the History tab.
+  - `audit_logs` has `DECISION_APPROVED` / `DECISION_REJECTED` rows with full payloads.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app/api/routes/hr.py app/schemas/hr_decision.py app/repositories/hr_decision_repository.py app/main.py
+  pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+- **Checkpoint**: All new code lints/typechecks/builds clean. The decision endpoint enforces the state machine correctly (terminal, one decision, audited). The frontend has filterable dashboard and tabbed review with decision controls. Audit trail is complete through all stages.
+
+---
+
+## Phase 8 — Excel Export
+
+### Slice 8.1–8.3: Download applications as `.xlsx`
+- **Outcome**: HR can download the candidate application list as an Excel file from the dashboard. The backend builds the workbook from Postgres; the frontend fetches it as a binary blob and triggers a browser download.
+  - [`backend/app/services/export_service.py`](../backend/app/services/export_service.py): `build_applications_workbook(db, job_id, status, min_score, limit)` — one query LEFT-JOINs `applications → jobs → candidates → screening_results → hr_decisions`, then writes an `openpyxl` workbook with columns: Candidate Name, Email, Position, Applied At, Screening Score, Max Score, Screening Decision (QUALIFIED / NOT_QUALIFIED), HR Decision, Decision At. Same filters as the HR dashboard. Returns file bytes. No AI, no network.
+  - [`backend/app/api/routes/exports.py`](../backend/app/api/routes/exports.py): `GET /api/exports/applications` — accepts optional `job_id`, `status`, `min_score`, `limit`; returns the raw bytes as `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` with `Content-Disposition: attachment; filename="applications.xlsx"`.
+  - [`backend/app/main.py`](../backend/app/main.py): registers the `exports` router.
+  - [`frontend/src/lib/http.ts`](../frontend/src/lib/http.ts): refactored the shared fetch/error/timeout logic into `doFetch()`, then added `apiRequestBlob()` for binary responses (the old `apiRequest()` always called `response.json()` and could not download files).
+  - [`frontend/src/lib/api.ts`](../frontend/src/lib/api.ts): added `api.exportBlob(path)` which hits the endpoint and returns a `Blob`.
+  - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): "Export to Excel" button next to "Manage jobs". It sends the **currently active filters** (job / status / min score), turns the returned blob into a download via `URL.createObjectURL` + a temporary `<a download>` click, then revokes the object URL. A longer fetch timeout (60s) covers slow DB/excel builds; failures surface as an inline red banner.
+- **Why**: HR needs a machine-readable record of every candidate and its screening outcome for external reporting / payroll / ATS sync. Generating the file on the server keeps the logic deterministic and reuses the already-installed `openpyxl`; no client-side Excel library or additional dependency is needed.
+- **Exact Commands**:
+  ```bash
+  # Backend
+  cd backend && uv run --locked --no-sync ruff check app
+  uv run uvicorn app.main:app --reload --port 8001
+
+  # Direct download
+  curl -OJ "http://localhost:8001/api/exports/applications"
+
+  # Frontend
+  cd frontend && pnpm tsc --noEmit && pnpm lint
+  pnpm dev
+  ```
+- **Observable Result**: `curl` saves `applications.xlsx`; opening it in Excel/Numbers shows headers matching the HR dashboard. In the browser, the dashboard's "Export to Excel" button downloads the same file, honoring the active job/status/min-score filters.
+- **Verification**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check app
+  cd frontend && pnpm tsc --noEmit && pnpm lint
+  ```
+- **Checkpoint**: Phase 8 is functionally complete — export endpoint live, download works from the browser, columns match the dashboard, no new dependencies were added (`openpyxl` + `pandas` were already pinned in `pyproject.toml`).

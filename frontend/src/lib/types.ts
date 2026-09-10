@@ -1,11 +1,21 @@
 export type Job = {
   id: string;
   title: string;
+  description: string | null;
   min_experience_years: number;
   required_skills: string[];
   education_requirements: string[];
   score_weights: Record<string, number>;
   is_open: boolean;
+};
+
+export type JobCreate = {
+  title: string;
+  description: string;
+  min_experience_years: number;
+  required_skills: string[];
+  education_requirements: string[];
+  score_weights: Record<string, number>;
 };
 
 export type ApplicationCreated = {
@@ -124,4 +134,25 @@ export type ApplicationDetail = {
   form_data: Record<string, unknown> | null;
   pdf_profile: PdfProfile | null;
   screening: ScreeningResult | null;
+};
+
+export type DecisionRequest = {
+  decision: "APPROVED" | "REJECTED";
+  reviewer_email: string;
+  notes: string | null;
+};
+
+export type DecisionRead = {
+  id: string;
+  application_id: string;
+  decision: string;
+  reviewer_email: string;
+  notes: string | null;
+  decided_at: string;
+};
+
+export type HistoryEntry = {
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
 };

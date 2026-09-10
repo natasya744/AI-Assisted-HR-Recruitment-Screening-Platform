@@ -90,7 +90,7 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 - [x] **5.2** Produce total score + per-category breakdown + evidence (matched snippets).
 - [x] **5.3** Persist `screening_results`; status → `HR_REVIEW`. Block recompute after an HR decision.
 - [x] **5.4** Frontend: score panel with expandable breakdown + evidence.
-- [ ] **Checkpoint:** a strong and a weak CV get visibly different, explainable scores.
+- [X] **Checkpoint:** a strong and a weak CV get visibly different, explainable scores.
 
 ---
 
@@ -98,9 +98,9 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 **Goal:** HR reviews and decides; the state locks.
 
-- [ ] **6.1** Routes: `GET /api/hr/applications` (filter by job/status/score), `GET /api/hr/applications/{id}` (dossier: profile + screening + history).
-- [ ] **6.2** Route: `POST /api/hr/applications/{id}/decision` — enforce the state machine (approve/reject, terminal, one decision).
-- [ ] **6.3** Frontend: applications table (sort/filter) and a detail page with tabs (Profile / Screening / History) + approve/reject with confirm.
+- [x] **6.1** Routes: `GET /api/hr/applications` (filter by job/status/score), `GET /api/hr/applications/{id}` (dossier: profile + screening + history).
+- [x] **6.2** Route: `POST /api/hr/applications/{id}/decision` — enforce the state machine (approve/reject, terminal, one decision).
+- [x] **6.3** Frontend: applications table (sort/filter) and a detail page with tabs (Profile / Screening / History) + approve/reject with confirm.
 - [ ] **6.4** Audit event on every stage transition (created, processed, extracted, screened, decided).
 - [ ] **Checkpoint:** full loop works: review → decide → decision persisted, irreversible, audited.
 - [ ] *(Auth comes in Phase 9 — this slice can run unprotected for now.)*

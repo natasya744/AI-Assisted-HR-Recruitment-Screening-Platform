@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import ProvenanceBadge from "@/components/ProvenanceBadge";
 import ScreeningSummaryCard from "@/components/ScreeningSummaryCard";
 import StatusBadge from "@/components/StatusBadge";
@@ -15,12 +16,17 @@ import { getErrorMessage } from "@/lib/errors";
 import type {
   AlignmentCheck,
   ApplicationDetail,
+  DecisionRead,
   Education,
+  HistoryEntry,
   ProfileProvenance,
   WorkExperience,
 } from "@/lib/types";
 
 const STATUS_PROCESSING_FAILED = "DOCUMENT_PROCESSING_FAILED";
+
+const TABS = ["Profile", "Screening", "History"] as const;
+type Tab = (typeof TABS)[number];
 
 function Section({
   title,
@@ -172,11 +178,67 @@ function ChipList({ items }: { items: string[] }) {
   );
 }
 
+function HistoryTimeline({ entries }: { entries: HistoryEntry[] }) {
+  if (entries.length === 0) return <p className="text-sm text-slate-300">No history entries.</p>;
+
+  const eventLabels: Record<string, string> = {
+    APPLICATION_SUBMITTED: "Application submitted",
+    EXTRACTED: "Document extracted",
+    SCREENED: "Screening completed",
+    DECISION_APPROVED: "Candidate approved",
+    DECISION_REJECTED: "Candidate rejected",
+    DOCUMENT_PROCESSING_FAILED: "Document processing failed",
+  };
+
+  return (
+    <div className="space-y-3">
+      {entries.map((entry) => (
+        <div key={entry.created_at + entry.event_type} className="flex items-start gap-3">
+          <div className="mt-1.5 size-2 shrink-0 rounded-full bg-slate-300" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-800">
+              {eventLabels[entry.event_type] ?? entry.event_type.replace(/_/g, " ")}
+            </p>
+            <p className="text-xs text-slate-400">
+              {new Date(entry.created_at).toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+            {entry.payload.error ? (
+              <p className="mt-1 text-xs text-rose-600">Error: {entry.payload.error as string}</p>
+            ) : null}
+            {entry.payload.reviewer_email ? (
+              <p className="mt-1 text-xs text-slate-400">
+                by {entry.payload.reviewer_email as string}
+                {entry.payload.notes ? ` — ${entry.payload.notes as string}` : null}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Review() {
   const { id } = useParams<{ id: string }>();
   const [detail, setDetail] = useState<ApplicationDetail | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>("Profile");
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmDecision, setConfirmDecision] = useState<"APPROVED" | "REJECTED">("APPROVED");
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [decisionMade, setDecisionMade] = useState<DecisionRead | null>(null);
+
+  const alreadyDecided = detail?.status === "APPROVED" || detail?.status === "REJECTED";
 
   useEffect(() => {
     if (!id) return;
@@ -184,9 +246,29 @@ export default function Review() {
     setLoading(true);
     setError(null);
     api
-      .get<ApplicationDetail>(`/api/applications/${id}`)
+      .get<{
+        application: ApplicationDetail;
+        candidate: ApplicationDetail["candidate"];
+        screening: ApplicationDetail["screening"];
+        pdf_profile: ApplicationDetail["pdf_profile"];
+        history: HistoryEntry[];
+      }>(`/api/hr/applications/${id}`)
       .then((data) => {
-        if (!cancelled) setDetail(data);
+        if (!cancelled) {
+          setDetail({
+            id: data.application.id,
+            job_id: data.application.job_id,
+            job_title: data.application.job_title,
+            candidate: data.candidate,
+            status: data.application.status,
+            cv_storage_path: data.application.cv_storage_path,
+            applied_at: data.application.applied_at,
+            form_data: null,
+            pdf_profile: data.pdf_profile,
+            screening: data.screening,
+          });
+          setHistory(data.history);
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(getErrorMessage(err));
@@ -198,6 +280,34 @@ export default function Review() {
       cancelled = true;
     };
   }, [id]);
+
+  function openConfirm(decision: "APPROVED" | "REJECTED") {
+    setConfirmDecision(decision);
+    setDecisionError(null);
+    setConfirmOpen(true);
+  }
+
+  async function handleDecision() {
+    if (!id) return;
+    setDecisionLoading(true);
+    setDecisionError(null);
+    try {
+      const result = await api.post<DecisionRead>(`/api/hr/applications/${id}/decision`, {
+        decision: confirmDecision,
+        reviewer_email: "hr@example.com",
+        notes: null,
+      });
+      setDecisionMade(result);
+      setConfirmOpen(false);
+      if (detail) {
+        setDetail({ ...detail, status: confirmDecision });
+      }
+    } catch (err: unknown) {
+      setDecisionError(getErrorMessage(err));
+    } finally {
+      setDecisionLoading(false);
+    }
+  }
 
   if (loading) {
     return <p className="text-sm text-slate-400">Loading application…</p>;
@@ -252,102 +362,201 @@ export default function Review() {
         </div>
       ) : null}
 
-      {profile ? <AlignmentWarnings alignment={profile.alignment_check} /> : null}
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2.5 text-xs font-medium transition-colors ${
+              activeTab === tab
+                ? "border-b-2 border-indigo-600 text-indigo-700"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
-      {detail.screening ? (
-        <ScreeningSummaryCard screening={detail.screening} />
-      ) : profile && profile.extraction_status === "completed" ? (
-        <Card className="gap-0 py-4">
+      {/* Tab: Profile */}
+      {activeTab === "Profile" ? (
+        <>
+          {profile ? <AlignmentWarnings alignment={profile.alignment_check} /> : null}
+
+          {detail.screening ? (
+            <ScreeningSummaryCard screening={detail.screening} />
+          ) : null}
+
+          {!profile ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+              This application has not been processed yet.
+            </div>
+          ) : profile.extraction_status !== "completed" ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
+              No extracted profile is available for this application.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border bg-muted/40 p-3">
+                <ProvenanceLegend />
+              </div>
+
+              <Section title="Extracted profile">
+                <Field label="Full name" value={extracted?.full_name} tag={provenance.full_name} />
+                <Field label="Email" value={extracted?.email} tag={provenance.email} />
+                <Field label="Phone" value={extracted?.phone} tag={provenance.phone} />
+                <Field label="Location" value={extracted?.location} tag={provenance.location} />
+                <Field label="LinkedIn" value={extracted?.linkedin_url} tag={provenance.linkedin_url} />
+                <Field
+                  label="Experience"
+                  value={
+                    extracted?.total_experience_years != null
+                      ? `${extracted.total_experience_years} years`
+                      : null
+                  }
+                  tag={provenance.total_experience_years}
+                />
+              </Section>
+
+              {extracted?.professional_summary ? (
+                <Card className="gap-3 py-4">
+                  <CardHeader className="px-5 py-0">
+                    <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Professional summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-5">
+                    <p className="text-sm text-foreground">{extracted.professional_summary}</p>
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              <Section title={`Skills (${extracted?.skills.length ?? 0})`} tag={provenance.skills}>
+                <ChipList items={extracted?.skills ?? []} />
+              </Section>
+
+              <Section
+                title={`Work experience (${extracted?.work_experience.length ?? 0})`}
+                tag={provenance.work_experience}
+              >
+                <WorkExperienceList entries={extracted?.work_experience ?? []} />
+              </Section>
+
+              <Section
+                title={`Education (${extracted?.education.length ?? 0})`}
+                tag={provenance.education}
+              >
+                <EducationList entries={extracted?.education ?? []} />
+              </Section>
+
+              <Section title={`Certifications (${extracted?.certifications.length ?? 0})`} tag={provenance.certifications}>
+                <ChipList items={extracted?.certifications ?? []} />
+              </Section>
+
+              <Section title={`Languages (${extracted?.languages.length ?? 0})`} tag={provenance.languages}>
+                <ChipList items={extracted?.languages ?? []} />
+              </Section>
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {/* Tab: Screening */}
+      {activeTab === "Screening" ? (
+        detail.screening ? (
+          <ScreeningSummaryCard screening={detail.screening} />
+        ) : (
+          <Card className="gap-0 py-4">
+            <CardHeader className="px-5 py-0">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Screening result
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5">
+              <p className="text-sm text-muted-foreground">
+                {profile && profile.extraction_status === "completed"
+                  ? "No screening result is available for this application."
+                  : "This application has not been processed yet."}
+              </p>
+            </CardContent>
+          </Card>
+        )
+      ) : null}
+
+      {/* Tab: History */}
+      {activeTab === "History" ? (
+        <Card className="gap-3 py-4">
           <CardHeader className="px-5 py-0">
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Screening result
+              Audit history
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5">
-            <p className="text-sm text-muted-foreground">
-              A screening result could not be loaded for this application.
-            </p>
+            <HistoryTimeline entries={history} />
           </CardContent>
         </Card>
       ) : null}
 
-      {!profile ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-          This application has not been processed yet.
-        </div>
-      ) : profile.extraction_status !== "completed" ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-          No extracted profile is available for this application.
+      {/* Decision buttons */}
+      {!alreadyDecided ? (
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+          {decisionMade ? (
+            <p className="text-sm text-emerald-600">Decision recorded: {decisionMade.decision}</p>
+          ) : (
+            <>
+              <button
+                onClick={() => openConfirm("REJECTED")}
+                disabled={decisionLoading}
+                className="rounded-lg border border-rose-200 bg-white px-5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => openConfirm("APPROVED")}
+                disabled={decisionLoading}
+                className="rounded-lg bg-emerald-600 px-5 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+              >
+                {decisionLoading ? "Processing…" : "Approve"}
+              </button>
+            </>
+          )}
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-border bg-muted/40 p-3">
-            <ProvenanceLegend />
-          </div>
-
-          <Section title="Extracted profile">
-            <Field label="Full name" value={extracted?.full_name} tag={provenance.full_name} />
-            <Field label="Email" value={extracted?.email} tag={provenance.email} />
-            <Field label="Phone" value={extracted?.phone} tag={provenance.phone} />
-            <Field label="Location" value={extracted?.location} tag={provenance.location} />
-            <Field label="LinkedIn" value={extracted?.linkedin_url} tag={provenance.linkedin_url} />
-            <Field
-              label="Experience"
-              value={
-                extracted?.total_experience_years != null
-                  ? `${extracted.total_experience_years} years`
-                  : null
-              }
-              tag={provenance.total_experience_years}
-            />
-          </Section>
-
-          {extracted?.professional_summary ? (
-            <Card className="gap-3 py-4">
-              <CardHeader className="px-5 py-0">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Professional summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-5">
-                <p className="text-sm text-foreground">{extracted.professional_summary}</p>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <Section title={`Skills (${extracted?.skills.length ?? 0})`} tag={provenance.skills}>
-            <ChipList items={extracted?.skills ?? []} />
-          </Section>
-
-          <Section
-            title={`Work experience (${extracted?.work_experience.length ?? 0})`}
-            tag={provenance.work_experience}
-          >
-            <WorkExperienceList entries={extracted?.work_experience ?? []} />
-          </Section>
-
-          <Section
-            title={`Education (${extracted?.education.length ?? 0})`}
-            tag={provenance.education}
-          >
-            <EducationList entries={extracted?.education ?? []} />
-          </Section>
-
-          <Section title={`Certifications (${extracted?.certifications.length ?? 0})`} tag={provenance.certifications}>
-            <ChipList items={extracted?.certifications ?? []} />
-          </Section>
-
-          <Section title={`Languages (${extracted?.languages.length ?? 0})`} tag={provenance.languages}>
-            <ChipList items={extracted?.languages ?? []} />
-          </Section>
+        <div className="flex items-center justify-end border-t border-slate-100 pt-6">
+          <p className="text-xs text-slate-400">
+            {decisionMade
+              ? `Decision recorded: ${decisionMade.decision}`
+              : "This application has already been decided."}
+          </p>
         </div>
       )}
+
+      {decisionError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {decisionError}
+        </div>
+      ) : null}
 
       <p className="text-xs text-slate-400">
         <Link to="/hr" className="underline hover:text-slate-600">
           Back to dashboard
         </Link>
       </p>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={confirmDecision === "APPROVED" ? "Approve candidate" : "Reject candidate"}
+        message={
+          confirmDecision === "APPROVED"
+            ? "This candidate will be marked as approved. The decision is terminal and cannot be undone."
+            : "This candidate will be marked as rejected. The decision is terminal and cannot be undone."
+        }
+        confirmLabel={confirmDecision === "APPROVED" ? "Confirm approval" : "Confirm rejection"}
+        confirmVariant={confirmDecision === "APPROVED" ? "approve" : "reject"}
+        onConfirm={handleDecision}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

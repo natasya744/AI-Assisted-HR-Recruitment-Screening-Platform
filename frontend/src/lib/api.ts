@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from "./http";
+import { ApiError, apiRequest, apiRequestBlob } from "./http";
 import { env } from "./env";
 
 type RequestInitWithTimeout = RequestInit & { timeout?: number };
@@ -31,6 +31,10 @@ export const api = {
 
   delete<T>(path: string, init?: RequestInitWithTimeout): Promise<T> {
     return request<T>("DELETE", path, undefined, init);
+  },
+
+  exportBlob(path: string, init?: RequestInitWithTimeout): Promise<Blob> {
+    return apiRequestBlob("GET", `${env.apiBaseUrl}${path}`, undefined, init);
   },
 };
 

@@ -4,6 +4,7 @@ import Home from "@/pages/Home";
 import ApplyForm from "@/pages/apply/ApplyForm";
 import Dashboard from "@/pages/hr/Dashboard";
 import Review from "@/pages/hr/Review";
+import Jobs from "@/pages/hr/Jobs";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/apply" element={<ApplyForm />} />
           <Route path="/hr" element={<Dashboard />} />
+          <Route path="/hr/jobs" element={<Jobs />} />
           <Route path="/hr/review/:id" element={<Review />} />
         </Route>
       </Routes>

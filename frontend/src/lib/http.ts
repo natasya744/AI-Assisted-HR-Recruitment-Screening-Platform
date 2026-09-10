@@ -14,12 +14,12 @@ export class ApiError extends Error {
 
 const DEFAULT_TIMEOUT = 15_000;
 
-export async function apiRequest<T>(
+async function doFetch(
   method: string,
   url: string,
   body?: unknown,
   init?: RequestInit & { timeout?: number },
-): Promise<T> {
+): Promise<Response> {
   const timeout = init?.timeout ?? DEFAULT_TIMEOUT;
 
   const headers: Record<string, string> = {
@@ -62,11 +62,7 @@ export async function apiRequest<T>(
       );
     }
 
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
+    return response;
   } catch (error: unknown) {
     if (error instanceof ApiError) {
       throw error;
@@ -83,4 +79,29 @@ export async function apiRequest<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function apiRequest<T>(
+  method: string,
+  url: string,
+  body?: unknown,
+  init?: RequestInit & { timeout?: number },
+): Promise<T> {
+  const response = await doFetch(method, url, body, init);
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiRequestBlob(
+  method: string,
+  url: string,
+  body?: unknown,
+  init?: RequestInit & { timeout?: number },
+): Promise<Blob> {
+  const response = await doFetch(method, url, body, init);
+  return response.blob();
 }
