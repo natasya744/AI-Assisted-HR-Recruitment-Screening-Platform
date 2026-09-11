@@ -634,3 +634,32 @@ This guide documents every completed slice, explaining what was built, why, exac
 - **Verification**: All endpoints verified live — `POST /api/applications` returns `201` with `cv_storage_path`, `GET /api/hr/applications` includes `cv_storage_path`, `GET /api/cv/{id}` returns `200` with PDF bytes.
 
 - **Checkpoint**: Application submission completes without timeout errors, the HR list includes CV paths, and the CV viewer page renders the original PDF from the private bucket.
+
+---
+
+## Phase 10 — Design System & Frontend UI Extension
+
+### Slice 10.1: Full-Width Layout Frame & Cohesive UI Redesign
+
+- **Outcome**: Extended the frontend layout frame and elevated the design aesthetics across all application views:
+  - [`frontend/src/index.css`](../frontend/src/index.css): Removed restrictive fixed-width `width: 1126px` and border box from `#root`. Replaced with full-width responsive modern layout, standard typography resets, and clean slate/indigo styling.
+  - [`frontend/src/components/Layout.tsx`](../frontend/src/components/Layout.tsx): Built a sticky glassmorphism header (`backdrop-blur-md bg-white/85`), active navigation pill indicators with Lucide icons, live AI screening engine badge, wide container frame (`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`), and responsive footer.
+  - [`frontend/src/pages/Home.tsx`](../frontend/src/pages/Home.tsx): Transformed into a high-impact recruitment portal with hero section, equal-height portal cards for "Candidate Application", "HR Screening Dashboard", and "Job Management", plus architecture workflow feature highlights.
+  - [`frontend/src/pages/apply/ApplyForm.tsx`](../frontend/src/pages/apply/ApplyForm.tsx): Upgraded public candidate form into an interactive card with drag-and-drop PDF dropzone, real-time validation, file preview, structured contact sections, and success timeline.
+  - [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx): Redesigned recruiter dashboard with Lucide KPI metric cards, multi-parameter search & filter toolbar, candidate initial avatars, score progress bars, qualification & status badges, CV quick-view buttons, and Excel export.
+  - [`frontend/src/pages/hr/Jobs.tsx`](../frontend/src/pages/hr/Jobs.tsx): Enhanced job management with modern cards, skills & education chips, interactive score weight allocation sliders (Skills %, Experience %, Education %, Other %), and modal dialog.
+  - [`frontend/src/pages/hr/Review.tsx`](../frontend/src/pages/hr/Review.tsx): Extended candidate assessment page with tabbed views (Profile, AI Screening Report, Audit Trail), alignment discrepancy warnings, and candidate decision actions.
+
+- **Why**: The starter layout had a fixed 1126px width with side borders, causing the interface to look boxed in on modern displays with unequal sizing between pages. Expanding the frame to full-width responsive layouts provides equal visual weight, enhanced readability, and a cohesive enterprise feel.
+
+- **Exact Commands**:
+  ```bash
+  cd frontend && pnpm build && pnpm lint
+  ```
+
+- **Observable Result**:
+  - Full-width modern interface across all pages on `http://localhost:5174`.
+  - Cohesive layout and responsive sizing between "Create a job", "Apply for positions", and "HR Dashboard".
+  - Clean TypeScript compilation and zero build errors.
+
+- **Checkpoint**: Frontend frame is extended to full width with consistent, polished design tokens and seamless navigation.
