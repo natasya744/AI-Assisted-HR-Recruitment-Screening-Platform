@@ -39,9 +39,7 @@ class CandidateProfileExtracted(BaseModel):
     certifications: list[str] = Field(
         default_factory=list, description="Certifications or licenses listed"
     )
-    languages: list[str] = Field(
-        default_factory=list, description="Languages spoken"
-    )
+    languages: list[str] = Field(default_factory=list, description="Languages spoken")
 
     @model_validator(mode="before")
     @classmethod
