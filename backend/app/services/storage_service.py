@@ -60,3 +60,8 @@ def get_public_url(path: str) -> str:
 def get_authenticated_url(path: str) -> str:
     client = get_storage_client()
     return client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).get_public_url(path)
+
+
+def delete_cv(path: str) -> None:
+    client = get_storage_client()
+    client.storage.from_(settings.SUPABASE_STORAGE_BUCKET).remove([path])

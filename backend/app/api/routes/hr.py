@@ -9,12 +9,13 @@ from app.db.session import get_db
 from app.repositories import (
     application_repository,
     audit_repository,
+    candidate_repository,
     hr_decision_repository,
     profile_repository,
     screening_repository,
 )
 from app.schemas.hr_decision import DecisionRead, DecisionRequest
-from app.services import application_service
+from app.services import application_service, storage_service
 from app.services.screening_service import assess_qualification
 
 router = APIRouter(prefix="/api/hr", tags=["hr"])
@@ -200,3 +201,28 @@ def make_decision(
         notes=hr_decision.notes,
         decided_at=hr_decision.decided_at,
     )
+
+
+@router.delete("/applications/{application_id}", status_code=204)
+def delete_application(application_id: uuid.UUID, db: DbSession) -> None:
+    application = application_repository.get(db, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    cv_storage_path = application.cv_storage_path
+    if cv_storage_path:
+        storage_service.delete_cv(cv_storage_path)
+
+    candidate_id = application.candidate_id
+    application_repository.delete(db, application_id)
+
+    if candidate_repository.count_by_candidate_id(db, candidate_id) == 0:
+        candidate_repository.delete(db, candidate_id)
+
+    audit_repository.append(
+        db,
+        application_id=application_id,
+        event_type="APPLICATION_DELETED",
+        payload={"cv_storage_path": cv_storage_path},
+    )
+    db.commit()

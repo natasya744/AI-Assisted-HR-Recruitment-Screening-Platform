@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_TIMEOUT = 15_000;
+const DEFAULT_TIMEOUT = 120_000;
 
 async function doFetch(
   method: string,

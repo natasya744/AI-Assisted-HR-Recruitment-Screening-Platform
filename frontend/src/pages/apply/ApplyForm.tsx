@@ -76,7 +76,7 @@ export default function ApplyForm() {
       data.set("location", location);
       data.set("linkedin_url", linkedinUrl);
       data.set("cv", cv);
-      const created = await api.post<ApplicationCreated>("/api/applications", data);
+      const created = await api.post<ApplicationCreated>("/api/applications", data, { timeout: 120_000 });
       setApplicationId(created.id);
     } catch (err: unknown) {
       setError(getErrorMessage(err));

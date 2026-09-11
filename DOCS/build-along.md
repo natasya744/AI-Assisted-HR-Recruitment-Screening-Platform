@@ -615,3 +615,22 @@ This guide documents every completed slice, explaining what was built, why, exac
 - **Verification**: `cd backend && uv run --locked --no-sync ruff check app` passes; `cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build` all green.
 
 - **Checkpoint**: HR can view the original uploaded CV PDF from the dashboard with a single click, in a separate browser tab — no new dependencies, no exposed secrets, the private bucket stays private.
+
+### Slice 9.2: Bug fixes — timeout, import, and list response
+
+- **Outcome**: Fixed three bugs that prevented the application workflow from functioning end-to-end.
+
+  - **Timeout fix** (`frontend/src/lib/http.ts`): increased `DEFAULT_TIMEOUT` from 15_000ms to 120_000ms. The backend pipeline (Supabase upload + PDF text extraction + OpenAI extraction + screening + AI advisor) takes 30–60+ seconds. A 15-second timeout caused every application submission to fail with "Cannot reach the server" on the frontend.
+  - **ApplyForm timeout** (`frontend/src/pages/apply/ApplyForm.tsx`): added `{ timeout: 120_000 }` to the `api.post` call for the same reason.
+  - **Import fix** (`backend/app/services/application_service.py`): changed `from app.models import application` to `from app.models import Application`. The `models/__init__.py` exports the `Application` **class**, not the `application` **module**. The original import shadowed the `application` parameter name used in function signatures, causing `NameError: name 'Application' is not defined` at runtime.
+  - **List response fix** (`backend/app/api/routes/applications.py`): added `cv_storage_path=application.cv_storage_path` to the `ApplicationListItem` construction in `list_applications`, so the HR dashboard receives the storage path for each application.
+
+- **Exact Commands**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check app
+  cd frontend && pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+
+- **Verification**: All endpoints verified live — `POST /api/applications` returns `201` with `cv_storage_path`, `GET /api/hr/applications` includes `cv_storage_path`, `GET /api/cv/{id}` returns `200` with PDF bytes.
+
+- **Checkpoint**: Application submission completes without timeout errors, the HR list includes CV paths, and the CV viewer page renders the original PDF from the private bucket.

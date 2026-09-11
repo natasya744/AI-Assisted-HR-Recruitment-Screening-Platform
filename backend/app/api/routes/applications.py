@@ -94,6 +94,7 @@ def list_applications(
                 job_title=job.title,
                 candidate_name=candidate_name,
                 candidate_email=candidate_email,
+                cv_storage_path=application.cv_storage_path,
                 screening=screening_summary,
             )
         )

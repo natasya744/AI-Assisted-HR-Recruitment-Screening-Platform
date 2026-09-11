@@ -29,3 +29,9 @@ def get(db: Session, job_id: uuid.UUID) -> Job | None:
 def list_open(db: Session) -> list[Job]:
     stmt = select(Job).where(Job.is_open.is_(True)).order_by(Job.title)
     return list(db.execute(stmt).scalars())
+
+
+def delete(db: Session, job_id: uuid.UUID) -> None:
+    job = db.get(Job, job_id)
+    if job is not None:
+        db.delete(job)

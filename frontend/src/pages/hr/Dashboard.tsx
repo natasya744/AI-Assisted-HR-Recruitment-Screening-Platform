@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import QualificationBadge from "@/components/QualificationBadge";
 import StatusBadge from "@/components/StatusBadge";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   Card,
   CardDescription,
@@ -70,6 +71,7 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [filterJobId, setFilterJobId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -142,6 +144,21 @@ export default function Dashboard() {
       setExportError(getErrorMessage(err));
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleDeleteApplication(appId: string) {
+    try {
+      await api.delete(`/api/hr/applications/${appId}`);
+      setDeleteConfirmId(null);
+      const params = exportQueryStrings();
+      const qs = params.toString();
+      const rows = await api.get<ApplicationListItem[]>(
+        `/api/hr/applications${qs ? `?${qs}` : ""}`,
+      );
+      setApplications(rows);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   }
 
@@ -252,6 +269,7 @@ export default function Dashboard() {
                 <TableHead className="w-[14%]">Verdict</TableHead>
                 <TableHead className="w-[16%]">Status</TableHead>
                 <TableHead className="w-[12%] pr-5 text-right">Applied</TableHead>
+                <TableHead className="w-[8%] pr-5 text-right">Delete</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -336,6 +354,21 @@ export default function Dashboard() {
                     <TableCell className="whitespace-nowrap pr-5 text-right text-xs tabular-nums text-slate-500">
                       {formatDate(app.applied_at)}
                     </TableCell>
+                    <TableCell className="pr-5 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirmId(app.id);
+                        }}
+                        className="shrink-0 rounded p-1 text-red-400 hover:bg-red-50 hover:text-red-600"
+                        title="Delete application"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="size-4">
+                          <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -349,6 +382,17 @@ export default function Dashboard() {
           Back to home
         </Link>
       </p>
+      {deleteConfirmId ? (
+        <ConfirmDialog
+          open={!!deleteConfirmId}
+          title="Delete this application?"
+          message="This will remove the CV from Supabase storage and the candidate record if no other applications remain. It cannot be undone."
+          confirmLabel="Delete"
+          confirmVariant="reject"
+          onConfirm={() => handleDeleteApplication(deleteConfirmId)}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
+      ) : null}
     </div>
   );
 }

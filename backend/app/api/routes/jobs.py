@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.repositories import job_repository
+from app.repositories import application_repository, job_repository
 from app.schemas.job import JobCreate, JobRead
 from app.services import job_service
 
@@ -53,7 +53,17 @@ def update_job(
     job.min_experience_years = data.min_experience_years
     job.required_skills = data.required_skills
     job.education_requirements = data.education_requirements
-    job.score_weights = data.score_weights
     db.commit()
     db.refresh(job)
     return JobRead.model_validate(job)
+
+
+@router.delete("/{job_id}", status_code=204)
+def delete_job(job_id: uuid.UUID, db: DbSession) -> None:
+    if application_repository.count_by_job_id(db, job_id) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete a job that has applications. Delete applications first.",
+        )
+    job_repository.delete(db, job_id)
+    db.commit()

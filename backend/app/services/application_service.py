@@ -4,7 +4,7 @@ from pathlib import PurePosixPath
 
 from sqlalchemy.orm import Session
 
-from app.models import application
+from app.models import Application
 from app.providers import resume_extractor
 from app.repositories import (
     application_repository,

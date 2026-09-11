@@ -55,3 +55,14 @@ def list_with_details(db: Session, limit: int = 100) -> list[Any]:
         .limit(limit)
     )
     return list(db.execute(stmt).all())
+
+
+def count_by_job_id(db: Session, job_id: uuid.UUID) -> int:
+    stmt = select(Application).where(Application.job_id == job_id)
+    return len(db.execute(stmt).scalars().all())
+
+
+def delete(db: Session, application_id: uuid.UUID) -> None:
+    application = db.get(Application, application_id)
+    if application is not None:
+        db.delete(application)

@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Candidate
+from app.models import Application, Candidate
 
 
 def get_by_email(db: Session, email: str) -> Candidate | None:
@@ -51,3 +51,14 @@ def update_contact(
     candidate.linkedin_url = linkedin_url
     db.flush()
     return candidate
+
+
+def count_by_candidate_id(db: Session, candidate_id: uuid.UUID) -> int:
+    stmt = select(Application).where(Application.candidate_id == candidate_id)
+    return len(db.execute(stmt).scalars().all())
+
+
+def delete(db: Session, candidate_id: uuid.UUID) -> None:
+    candidate = db.get(Candidate, candidate_id)
+    if candidate is not None:
+        db.delete(candidate)
