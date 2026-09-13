@@ -25,6 +25,7 @@ import {
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ProvenanceBadge from "@/components/ProvenanceBadge";
 import ScreeningSummaryCard from "@/components/ScreeningSummaryCard";
+import AISummaryCard from "@/components/AISummaryCard";
 import StatusBadge from "@/components/StatusBadge";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
@@ -588,6 +589,8 @@ export default function Review() {
                   <ChipList items={extracted?.languages ?? []} />
                 </Section>
               </div>
+
+              {detail.screening && <AISummaryCard screening={detail.screening} />}
             </div>
           )}
         </div>
