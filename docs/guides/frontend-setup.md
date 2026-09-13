@@ -18,7 +18,7 @@ pnpm dlx shadcn@latest init
 ```bash
 cd frontend
 pnpm install
-pnpm dev -- --port 9001
+pnpm dev -- --port 9000
 ```
 
 ## Check

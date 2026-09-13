@@ -18,6 +18,7 @@ import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { Job, JobCreate } from "@/lib/types";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import TagInput from "@/components/TagInput";
 
 const DEFAULT_WEIGHTS = { skills: 30, experience: 30, education: 20, other: 20 };
 
@@ -30,17 +31,6 @@ function emptyForm(): JobCreate {
     education_requirements: [],
     score_weights: DEFAULT_WEIGHTS,
   };
-}
-
-function formatList(list: string[]): string {
-  return list.join(", ");
-}
-
-function parseList(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 export default function JobsPage() {
@@ -439,33 +429,23 @@ export default function JobsPage() {
 
               {/* Skills and Education */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Required Skills (comma-separated)
-                  </label>
-                  <input
-                    value={formatList(form.required_skills)}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleChange("required_skills", parseList(e.target.value))
-                    }
-                    placeholder="Python, PyTorch, Azure, SQL"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 shadow-2xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
-                  />
-                </div>
+                <TagInput
+                  id="required_skills"
+                  label="Required Skills"
+                  items={form.required_skills}
+                  onChange={(skills) => handleChange("required_skills", skills)}
+                  placeholder="e.g. Python, PyTorch, Azure, SQL..."
+                  badgeTone="indigo"
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Education Requirements (comma-separated)
-                  </label>
-                  <input
-                    value={formatList(form.education_requirements)}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleChange("education_requirements", parseList(e.target.value))
-                    }
-                    placeholder="Bachelor's, Master's"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 shadow-2xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
-                  />
-                </div>
+                <TagInput
+                  id="education_requirements"
+                  label="Education Requirements"
+                  items={form.education_requirements}
+                  onChange={(edu) => handleChange("education_requirements", edu)}
+                  placeholder="e.g. Bachelor's, Master's..."
+                  badgeTone="slate"
+                />
               </div>
 
               {/* Score Weights Configurator */}

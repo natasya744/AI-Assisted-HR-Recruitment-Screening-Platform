@@ -1,4 +1,4 @@
-import json
+import re
 import uuid
 
 from sqlalchemy.orm import Session
@@ -7,6 +7,57 @@ from app.ai.schemas.candidate_profile import CandidateProfileExtracted
 from app.models import Job, ScreeningResult
 from app.providers.screening_advisor import get_screening_advice
 from app.repositories import hr_decision_repository, screening_repository
+
+
+def _normalize_skill(s: str) -> str:
+    """Normalize skill string for resilient matching."""
+    s = s.lower().strip()
+    s = re.sub(r"[\-_/]+", " ", s)
+    s = re.sub(r"[^\w\s]", "", s)
+    tokens = s.split()
+    normalized_tokens = []
+    for t in tokens:
+        if t.endswith("ing") and len(t) > 4:
+            t = t[:-3]
+        elif t.endswith("ies") and len(t) > 4:
+            t = t[:-3] + "y"
+        elif t.endswith("s") and len(t) > 3 and not t.endswith("ss"):
+            t = t[:-1]
+        normalized_tokens.append(t)
+    return " ".join(normalized_tokens)
+
+
+def _is_skill_matched(
+    required_skill: str,
+    candidate_skills: list[str],
+    extended_corpus: str,
+) -> bool:
+    req_clean = required_skill.strip().lower()
+    req_norm = _normalize_skill(required_skill)
+    req_tokens = set(req_norm.split())
+
+    # 1. Direct or normalized match against candidate extracted skills
+    for c_skill in candidate_skills:
+        c_clean = c_skill.strip().lower()
+        if req_clean == c_clean:
+            return True
+        c_norm = _normalize_skill(c_skill)
+        if req_norm == c_norm:
+            return True
+        # Token subset match (e.g. "prompt engineer" matches "advanced prompt engineering")
+        c_tokens = set(c_norm.split())
+        if req_tokens and req_tokens.issubset(c_tokens):
+            return True
+        if c_tokens and c_tokens.issubset(req_tokens) and len(c_tokens) >= 2:
+            return True
+
+    # 2. Check exact phrase or word in extended CV corpus
+    if len(req_clean) >= 2:
+        pattern = rf"\b{re.escape(req_clean)}\b"
+        if re.search(pattern, extended_corpus, re.IGNORECASE):
+            return True
+
+    return False
 
 
 class ScreeningError(Exception):
@@ -47,13 +98,27 @@ def run_deterministic_screening(
             "Cannot recompute screening after an HR decision has been made"
         )
 
-    skills = set(s.lower() for s in (profile.skills or []))
-    required = set(s.lower() for s in (job.required_skills or []))
-    matched = skills & required
+    candidate_skills = [s for s in (profile.skills or []) if s]
+    extended_corpus = " ".join([
+        *candidate_skills,
+        profile.professional_summary or "",
+        *(f"{e.title or ''} {e.company or ''}" for e in (profile.work_experience or [])),
+        *(profile.certifications or []),
+    ]).lower()
+
+    matched: list[str] = []
+    missing: list[str] = []
+    for req in (job.required_skills or []):
+        if _is_skill_matched(req, candidate_skills, extended_corpus):
+            matched.append(req)
+        else:
+            missing.append(req)
+
+    skill_weight = job.score_weights.get("skills", 30)
+    required_count = len(job.required_skills or [])
     skill_score = 0
-    if required:
-        skill_ratio = len(matched) / len(required)
-        skill_weight = job.score_weights.get("skills", 30)
+    if required_count > 0:
+        skill_ratio = len(matched) / required_count
         skill_score = round(skill_ratio * skill_weight)
 
     exp_years = profile.total_experience_years or 0
@@ -62,7 +127,7 @@ def run_deterministic_screening(
 
     edu_weight = job.score_weights.get("education", 20)
     edu_match = _matches_any_education(
-        profile.education or [], job.education_requirements
+        profile.education or [], job.education_requirements or []
     )
     edu_score = edu_weight if edu_match else 0
 
@@ -75,14 +140,14 @@ def run_deterministic_screening(
         application_id=application_id,
         total_score=total,
         breakdown={
-            "skills": {"score": skill_score, "max": skill_weight, "matched": list(matched)},
+            "skills": {"score": skill_score, "max": skill_weight, "matched": matched},
             "experience": {"score": exp_score, "max": exp_weight, "years": exp_years},
             "education": {"score": edu_score, "max": edu_weight},
             "other": {"score": other_score, "max": other_weight},
         },
         evidence={
-            "matched_skills": list(matched),
-            "missing_skills": list(required - matched),
+            "matched_skills": matched,
+            "missing_skills": missing,
             "experience_years": exp_years,
             "min_required_experience": job.min_experience_years,
             "education_requirements": job.education_requirements,
@@ -103,15 +168,31 @@ def run_ai_advisor(
     if profile_json is None:
         profile_json = profile.model_dump_json(indent=2, exclude_none=True)
 
-    if job.description:
-        job_description = job.description
-    else:
-        job_description = (
-            f"Required skills: {', '.join(job.required_skills)}\n"
-            f"Min experience: {job.min_experience_years} years\n"
-            f"Education: {', '.join(job.education_requirements)}\n"
-            f"Score weights: {json.dumps(job.score_weights)}"
+    # Assemble structured and unambiguous requirements to ground the AI model
+    requirements_parts: list[str] = []
+    if job.required_skills:
+        requirements_parts.append(f"Required Skills: {', '.join(job.required_skills)}")
+    if job.min_experience_years > 0:
+        requirements_parts.append(
+            f"Minimum Professional Experience: {job.min_experience_years} years"
         )
+    if job.education_requirements:
+        requirements_parts.append(
+            f"Education Requirements: {', '.join(job.education_requirements)}"
+        )
+
+    structured_section = "\n".join(requirements_parts)
+
+    if job.description:
+        if structured_section:
+            job_description = (
+                f"### Structured Criteria:\n{structured_section}\n\n"
+                f"### Full Role Description:\n{job.description}"
+            )
+        else:
+            job_description = job.description
+    else:
+        job_description = structured_section or "No specific criteria or description provided."
 
     result = get_screening_advice(
         job_title=job.title,
@@ -210,11 +291,51 @@ def _matches_any_education(
     education_list: list,
     requirements: list[str],
 ) -> bool:
-    requirement_lower = [r.lower() for r in requirements]
+    if not requirements:
+        return True
+    requirement_lower = [r.strip().lower() for r in requirements if r.strip()]
+    if not requirement_lower:
+        return True
+
     for edu in education_list:
-        text = " ".join(
-            str(v) for v in (edu.get("degree", "") if isinstance(edu, dict) else (edu.degree or ""))
-        ).lower()
-        if any(req in text for req in requirement_lower):
-            return True
+        if isinstance(edu, dict):
+            degree = str(edu.get("degree") or "")
+            field = str(edu.get("field") or "")
+            inst = str(edu.get("institution") or "")
+        else:
+            degree = str(getattr(edu, "degree", "") or "")
+            field = str(getattr(edu, "field", "") or "")
+            inst = str(getattr(edu, "institution", "") or "")
+
+        full_text = f"{degree} {field} {inst}".lower()
+        if not full_text.strip():
+            continue
+
+        for req in requirement_lower:
+            if req in full_text:
+                return True
+            # Common degree equivalencies
+            bachelor_terms = ("bachelor", "bachelor's", "s1", "sarjana", "undergraduate")
+            bachelor_aliases = (
+                "bachelor", "s1", "sarjana", "b.sc", "b.s.", "b.tech", "s.kom", "s.t.",
+                "undergraduate",
+            )
+            if any(term in req for term in bachelor_terms):
+                if any(term in full_text for term in bachelor_aliases):
+                    return True
+
+            master_terms = ("master", "master's", "s2", "magister", "postgraduate")
+            master_aliases = (
+                "master", "s2", "magister", "m.sc", "m.s.", "postgraduate", "m.kom",
+            )
+            if any(term in req for term in master_terms):
+                if any(term in full_text for term in master_aliases):
+                    return True
+
+            if any(term in req for term in ("diploma", "d3", "associate")):
+                if any(term in full_text for term in ("diploma", "d3", "associate", "a.md")):
+                    return True
+
     return False
+
+

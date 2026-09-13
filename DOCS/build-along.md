@@ -663,3 +663,27 @@ This guide documents every completed slice, explaining what was built, why, exac
   - Clean TypeScript compilation and zero build errors.
 
 - **Checkpoint**: Frontend frame is extended to full width with consistent, polished design tokens and seamless navigation.
+
+### Slice 10.2: AI-Driven CV Extraction & Modular Screening Engine
+
+- **Outcome**: Upgraded the resume extraction prompts and deterministic screening engine:
+  - [`backend/app/ai/prompts/resume_extraction.py`](../backend/app/ai/prompts/resume_extraction.py): Enhanced system prompt to extract technical and professional skills comprehensively from all resume sections, calculate total experience duration across employment history, handle OCR/PDF formatting anomalies and human typos, and extract canonical industry terms alongside standard acronyms (e.g. Prompt Engineering, Retrieval-Augmented Generation / RAG, Large Language Models / LLM).
+  - [`backend/app/ai/prompts/screening_advisor.py`](../backend/app/ai/prompts/screening_advisor.py): Clarified semantic alignment instructions so the AI advisor recognizes direct synonyms, acronyms, and phrasing variations (Prompt Optimization / Prompt Design, RAG, LLM, Analytical Thinking) while maintaining strict technology boundaries.
+  - [`backend/app/providers/resume_extractor.py`](../backend/app/providers/resume_extractor.py): Kept extraction temperature at the model default (`1`) because `gpt-5-mini` rejects any other value (`Unsupported value: 'temperature' does not support 0.0`). Pinning `0.0` broke the whole intake flow with `DOCUMENT_PROCESSING_FAILED`.
+  - [`backend/app/services/validation_service.py`](../backend/app/services/validation_service.py): Enhanced experience calculation fallback with robust regex-based date parsing (`_parse_year_month` supporting month names, `YYYY-MM`, `MM/YYYY`, `YYYY`, `Present`) to compute actual years from work history whenever direct year extraction is zero or missing.
+  - [`backend/app/services/screening_service.py`](../backend/app/services/screening_service.py): Kept the engine clean and modular without hardcoding domain dictionaries — implemented generic string/token normalization (`_normalize_skill` and token subset matching) and fixed the character-splitting education matching bug in `_matches_any_education`.
+
+- **Why**: Eliminates brittle hardcoded skill lists in Python code. Instead, the AI handles semantic understanding, normalization, and alignment from the job description and CV text, while the deterministic screening service remains generic, modular, and reliable.
+
+- **Exact Commands**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check .
+  ```
+
+- **Observable Result**:
+  - `ruff` passes cleanly (`All checks passed!`).
+  - Modular AI-driven extraction and semantic alignment link candidate credentials to job requirements accurately without hardcoded code lists.
+  - Total experience years are properly calculated and scored.
+  - Education matches correctly with degree equivalencies (Bachelor, Master, Diploma).
+
+- **Checkpoint**: Deterministic screening engine is modular and domain-agnostic, while AI prompt engineering handles semantic normalization and alignment faithfully.

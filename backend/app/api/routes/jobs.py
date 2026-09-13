@@ -53,6 +53,7 @@ def update_job(
     job.min_experience_years = data.min_experience_years
     job.required_skills = data.required_skills
     job.education_requirements = data.education_requirements
+    job.score_weights = data.score_weights
     db.commit()
     db.refresh(job)
     return JobRead.model_validate(job)

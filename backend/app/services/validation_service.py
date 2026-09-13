@@ -12,8 +12,7 @@ persisted:
      auto-corrected.
 """
 
-from __future__ import annotations
-
+import re
 from datetime import date
 from typing import Any
 
@@ -86,13 +85,15 @@ def deterministic_merge(
     else:
         provenance["skills"] = "missing"
 
-    if profile.total_experience_years is not None:
+    if profile.total_experience_years is not None and profile.total_experience_years > 0:
         provenance["total_experience_years"] = "ai"
     else:
         yrs = _estimate_total_years(profile.work_experience)
-        if yrs is not None:
+        if yrs is not None and yrs > 0:
             profile.total_experience_years = yrs
             provenance["total_experience_years"] = "deterministic"
+        elif profile.total_experience_years is not None:
+            provenance["total_experience_years"] = "ai"
         else:
             provenance["total_experience_years"] = "missing"
 
@@ -195,32 +196,61 @@ def run_validation_pipeline(
     }
 
 
+def _parse_year_month(date_str: str | None) -> tuple[int, int] | None:
+    if not date_str:
+        return None
+    cleaned = date_str.strip().lower()
+    if cleaned in ("present", "now", "current", "ongoing", "sekarang"):
+        today = date.today()
+        return (today.year, today.month)
+
+    year_match = re.search(r"\b(19\d\d|20\d\d)\b", date_str)
+    if not year_match:
+        return None
+    year = int(year_match.group(1))
+
+    month = 1
+    num_match = re.search(r"\b(0?[1-9]|1[0-2])[\/\-](19\d\d|20\d\d)\b", date_str)
+    if num_match:
+        month = int(num_match.group(1))
+    else:
+        num_match2 = re.search(r"\b(19\d\d|20\d\d)[\/\-](0?[1-9]|1[0-2])\b", date_str)
+        if num_match2:
+            month = int(num_match2.group(2))
+        else:
+            month_map = {
+                "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "mei": 5,
+                "jun": 6, "jul": 7, "aug": 8, "agu": 8, "sep": 9, "oct": 10,
+                "okt": 10, "nov": 11, "dec": 12, "des": 12,
+            }
+            for prefix, m_val in month_map.items():
+                if prefix in cleaned:
+                    month = m_val
+                    break
+    return (year, month)
+
+
 def _estimate_total_years(work_experience: list[WorkExperienceEntry]) -> int | None:
     """Best-effort estimate of total experience years from date ranges."""
     total_months = 0
     has_any_date = False
 
-    for exp in work_experience:
-        start = (exp.start_date or "").strip()
-        end = (exp.end_date or "").strip()
-        if not start and not end:
+    for exp in work_experience or []:
+        start_parsed = _parse_year_month(exp.start_date)
+        end_parsed = _parse_year_month(exp.end_date)
+
+        if not start_parsed and not end_parsed:
             continue
 
-        try:
-            start_year = int(start[:4])
-        except (ValueError, IndexError):
-            continue
-
-        has_any_date = True
-        if end.lower() == "present":
-            end_year = date.today().year
-        else:
-            try:
-                end_year = int(end[:4])
-            except (ValueError, IndexError):
-                end_year = start_year
-
-        total_months += max(0, (end_year - start_year) * 12)
+        if start_parsed and end_parsed:
+            has_any_date = True
+            start_y, start_m = start_parsed
+            end_y, end_m = end_parsed
+            months = (end_y - start_y) * 12 + (end_m - start_m)
+            total_months += max(1, months)
+        elif start_parsed:
+            has_any_date = True
+            total_months += 12
 
     if not has_any_date or total_months <= 0:
         return None

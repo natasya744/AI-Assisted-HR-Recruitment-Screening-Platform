@@ -1,4 +1,32 @@
-from pydantic import BaseModel, Field, model_validator
+import re
+from typing import Any
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _clean_string_list(v: Any) -> list[str]:
+    if v is None:
+        return []
+    if isinstance(v, str):
+        raw_items = [v]
+    elif isinstance(v, (list, tuple, set)):
+        raw_items = list(v)
+    else:
+        return []
+
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        if not isinstance(item, str):
+            item = str(item)
+        for part in re.split(r"[,\n\r]+", item):
+            cleaned = re.sub(r"\s+", " ", part).strip()
+            if cleaned:
+                key = cleaned.lower()
+                if key not in seen:
+                    seen.add(key)
+                    result.append(cleaned)
+    return result
 
 
 class EducationEntry(BaseModel):
@@ -40,6 +68,11 @@ class CandidateProfileExtracted(BaseModel):
         default_factory=list, description="Certifications or licenses listed"
     )
     languages: list[str] = Field(default_factory=list, description="Languages spoken")
+
+    @field_validator("skills", "certifications", "languages", mode="before")
+    @classmethod
+    def _sanitize_string_lists(cls, v: Any) -> list[str]:
+        return _clean_string_list(v)
 
     @model_validator(mode="before")
     @classmethod
