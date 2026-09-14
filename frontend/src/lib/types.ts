@@ -157,3 +157,8 @@ export type HistoryEntry = {
   payload: Record<string, unknown>;
   created_at: string;
 };
+
+export type EmailDraft = {
+  email_subject: string;
+  email_body: string;
+};

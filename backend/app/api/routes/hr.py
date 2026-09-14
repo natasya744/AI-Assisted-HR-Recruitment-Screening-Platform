@@ -16,6 +16,7 @@ from app.repositories import (
 )
 from app.schemas.hr_decision import DecisionRead, DecisionRequest
 from app.services import application_service, storage_service
+from app.services.email_draft_service import EmailDraftError, generate_email_draft
 from app.services.screening_service import assess_qualification
 
 router = APIRouter(prefix="/api/hr", tags=["hr"])
@@ -201,6 +202,21 @@ def make_decision(
         notes=hr_decision.notes,
         decided_at=hr_decision.decided_at,
     )
+
+
+@router.post("/applications/{application_id}/email-draft", status_code=200)
+def generate_application_email_draft(
+    application_id: uuid.UUID,
+    db: DbSession,
+):
+    try:
+        draft = generate_email_draft(db, application_id)
+        return {
+            "email_subject": draft.email_subject,
+            "email_body": draft.email_body,
+        }
+    except EmailDraftError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/applications/{application_id}", status_code=204)

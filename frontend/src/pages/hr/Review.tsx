@@ -23,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import EmailDraftCard from "@/components/EmailDraftCard";
 import ProvenanceBadge from "@/components/ProvenanceBadge";
 import ScreeningSummaryCard from "@/components/ScreeningSummaryCard";
 import AISummaryCard from "@/components/AISummaryCard";
@@ -591,6 +592,10 @@ export default function Review() {
               </div>
 
               {detail.screening && <AISummaryCard screening={detail.screening} />}
+
+              {detail.screening && (
+                <EmailDraftCard applicationId={detail.id} />
+              )}
             </div>
           )}
         </div>

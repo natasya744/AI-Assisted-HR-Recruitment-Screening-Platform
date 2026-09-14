@@ -441,6 +441,9 @@ export default function Dashboard() {
                     Qualification
                   </TableHead>
                   <TableHead className="py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    AI Verdict
+                  </TableHead>
+                  <TableHead className="py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
                     Status
                   </TableHead>
                   <TableHead className="py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
