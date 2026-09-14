@@ -13,7 +13,6 @@ export default function Layout() {
 
   const navItems = [
     { label: "Overview", href: "/", icon: Sparkles, exact: true },
-    { label: "Apply Position", href: "/apply", icon: UserPlus },
     { label: "HR Dashboard", href: "/hr", icon: LayoutDashboard },
     { label: "Job Management", href: "/hr/jobs", icon: Briefcase },
   ];
