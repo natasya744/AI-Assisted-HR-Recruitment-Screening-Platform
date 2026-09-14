@@ -2,6 +2,21 @@
 
 # AI-Assisted HR Recruitment Screening Platform
 
+## At a Glance — What This Does for HR
+
+HR receives applications, reads CVs, compares candidates against job requirements, and decides who to interview. This system automates the repetitive parts so HR can focus on people.
+
+1. **Reads CVs automatically** — HR no longer manually reads each PDF. AI extracts skills, experience, education, and certifications into a structured profile.
+2. **Scores candidates fairly** — A rules engine compares each candidate against the job's requirements and produces a transparent score with evidence.
+3. **Shows HR the full picture** — The dashboard displays every candidate's score, breakdown, and AI recommendation in one place.
+4. **HR decides, not the machine** — HR reviews, approves, or rejects. The AI never makes the final call.
+5. **Sends emails automatically** — Once HR decides, the system sends a ready-made email to the candidate (approval or rejection).
+6. **Everything is traceable** — Every action is logged in an audit trail. HR can see exactly when a candidate was screened, scored, and decided.
+
+> **The system removes repetitive work. HR keeps control.**
+
+---
+
 ## 1. Purpose
 
 This document is the **authoritative engineering architecture** for the HR recruitment screening platform. It must be followed by any developer or AI coding agent working on this project. If a proposed implementation conflicts with it, the implementation is reconsidered *before* code is written.
