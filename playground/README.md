@@ -73,12 +73,12 @@ uv run --directory backend --locked --no-sync python ../playground/main.py all
 
 ### 2. Test Document Processing (PDF $\rightarrow$ Markdown)
 ```bash
-uv run --directory backend --locked --no-sync python ../playground/main.py convert --pdf ../samples/Natasya_AI_Specialist_AutoGroup_Resume.pdf --out ../playground/output_resume.md
+uv run --directory backend --locked --no-sync python ../playground/main.py convert --pdf ../samples/jeniffer_AutoGroup_Resume.pdf --out ../playground/output_resume.md
 ```
 
 ### 3. Test Resume Extraction
 ```bash
-uv run --directory backend --locked --no-sync python ../playground/main.py extract --md ../samples/Natasya_AI_Specialist_AutoGroup_Resume.md
+uv run --directory backend --locked --no-sync python ../playground/main.py extract --md ../samples/kylie_Specialist_AutoGroup_Resume.md
 ```
 
 ### 4. Test Form vs. PDF Alignment (Anti-Hallucination)
