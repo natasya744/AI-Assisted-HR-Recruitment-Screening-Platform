@@ -83,14 +83,6 @@ export default function Layout() {
             </div>
 
             <Link
-              to="/hr/jobs"
-              className="hidden lg:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-            >
-              <Briefcase className="size-3.5 text-slate-500" />
-              Manage Jobs
-            </Link>
-
-            <Link
               to="/apply"
               className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 transition-all hover:shadow-md"
             >
