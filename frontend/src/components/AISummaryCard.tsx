@@ -4,6 +4,8 @@ import {
   XCircle,
   AlertTriangle,
   Lightbulb,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -48,6 +50,8 @@ type RequirementAssessment = {
 
 type AiAdvice = {
   overall_classification: string;
+  concise_summary?: string;
+  hr_advice?: string;
   per_requirement: RequirementAssessment[];
   additional_qualifications: string[];
   advisor_confidence: string;
@@ -144,12 +148,45 @@ export default function AISummaryCard({
           </div>
         ) : null}
 
+        {aiAdviceParsed.concise_summary ? (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="size-4 text-indigo-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                  Why this verdict
+                </p>
+                <p className="mt-1 text-sm text-indigo-900 leading-relaxed">
+                  {aiAdviceParsed.concise_summary}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {aiAdviceParsed.hr_advice ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+            <div className="flex items-start gap-3">
+              <ArrowRight className="size-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                  Recommendation for HR
+                </p>
+                <p className="mt-1 text-sm text-amber-900 leading-relaxed">
+                  {aiAdviceParsed.hr_advice}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {aiAdviceParsed.per_requirement.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Per-Requirement Assessment
-            </p>
-            <div className="space-y-2">
+          <details className="space-y-3">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+              Per-requirement detail{" "}
+              <span className="text-[10px] font-normal normal-case">(click to expand)</span>
+            </summary>
+            <div className="space-y-2 pt-1">
               {aiAdviceParsed.per_requirement.map((req, i) => (
                 <div
                   key={i}
@@ -189,7 +226,7 @@ export default function AISummaryCard({
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         )}
 
         {aiAdviceParsed.additional_qualifications.length > 0 ? (

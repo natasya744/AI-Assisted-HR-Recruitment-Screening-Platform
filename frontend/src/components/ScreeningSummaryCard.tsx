@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Sparkles, ArrowRight } from "lucide-react";
 import type { ScreeningResult, ScreeningBreakdownCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -45,6 +46,8 @@ type RequirementAssessment = {
 
 type AiAdvice = {
   overall_classification: string;
+  concise_summary?: string;
+  hr_advice?: string;
   per_requirement: RequirementAssessment[];
   additional_qualifications: string[];
   advisor_confidence: string;
@@ -179,47 +182,78 @@ export default function ScreeningSummaryCard({
           })}
         </div>
 
-        {(!screeningFailed && aiAdviceParsed && aiAdviceParsed.per_requirement.length > 0) ? (
-          <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                AI assessment
-              </p>
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {aiAdviceParsed.advisor_confidence} confidence
-              </Badge>
-            </div>
-
-            <div className="space-y-2.5">
-              {aiAdviceParsed.per_requirement.map((req, i) => (
-                <div key={i} className="space-y-0.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground">
-                        {req.requirement}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {CATEGORY_LABEL_MAP[req.category] ?? req.category}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={STATUS_VARIANTS[req.status] ?? "muted"}
-                      className="shrink-0 text-[10px]"
-                    >
-                      {STATUS_LABELS[req.status] ?? req.status}
-                    </Badge>
-                  </div>
-                  {req.reason ? (
-                    <p className="text-xs text-muted-foreground">{req.reason}</p>
-                  ) : null}
-                  {req.evidence ? (
-                    <p className="rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground">
-                      <span className="font-medium">CV evidence:</span> {req.evidence}
+                {(!screeningFailed && aiAdviceParsed) ? (
+          <div className="space-y-3">
+            {aiAdviceParsed.concise_summary ? (
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="size-3.5 text-indigo-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                      Why this verdict
                     </p>
-                  ) : null}
+                    <p className="text-xs text-indigo-900 leading-relaxed">
+                      {aiAdviceParsed.concise_summary}
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : null}
+
+            {aiAdviceParsed.hr_advice ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                <div className="flex items-start gap-2">
+                  <ArrowRight className="size-3.5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                      Recommendation for HR
+                    </p>
+                    <p className="text-xs text-amber-900 leading-relaxed">
+                      {aiAdviceParsed.hr_advice}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {aiAdviceParsed.per_requirement.length > 0 && (
+              <details className="space-y-2">
+                <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+                  Per-requirement detail{" "}
+                  <span className="text-[9px] font-normal normal-case">(click to expand)</span>
+                </summary>
+                <div className="space-y-2 pt-1">
+                  {aiAdviceParsed.per_requirement.map((req, i) => (
+                    <div key={i} className="space-y-0.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground">
+                            {req.requirement}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {CATEGORY_LABEL_MAP[req.category] ?? req.category}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={STATUS_VARIANTS[req.status] ?? "muted"}
+                          className="shrink-0 text-[10px]"
+                        >
+                          {STATUS_LABELS[req.status] ?? req.status}
+                        </Badge>
+                      </div>
+                      {req.reason ? (
+                        <p className="text-xs text-muted-foreground">{req.reason}</p>
+                      ) : null}
+                      {req.evidence ? (
+                        <p className="rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground">
+                          <span className="font-medium">CV evidence:</span> {req.evidence}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         ) : null}
 

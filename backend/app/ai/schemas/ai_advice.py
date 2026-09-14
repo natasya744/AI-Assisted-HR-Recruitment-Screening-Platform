@@ -22,6 +22,22 @@ class AdvisorOutput(BaseModel):
             "One of: QUALIFIED, NOT_QUALIFIED, POTENTIALLY_QUALIFIED, INSUFFICIENT_INFORMATION"
         )
     )
+    concise_summary: str | None = Field(
+        default=None,
+        description=(
+            "One concise sentence explaining WHY the candidate is "
+            "qualified or not qualified, based strictly on the evidence. "
+            "Example: 'Meets all mandatory requirements — Python and 3+ years experience verified.'"
+        ),
+    )
+    hr_advice: str | None = Field(
+        default=None,
+        description=(
+            "A short, actionable recommendation for HR on the next step. "
+            "Example: 'Proceed to interview' or "
+            "'Request additional documentation on certifications'."
+        ),
+    )
     per_requirement: list[RequirementAssessment] = Field(
         description="Assessment of each qualification from the job description"
     )

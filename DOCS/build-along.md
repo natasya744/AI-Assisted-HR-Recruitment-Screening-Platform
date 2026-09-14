@@ -332,6 +332,35 @@ This guide documents every completed slice, explaining what was built, why, exac
 
 ---
 
+### Slice 4.5: AI Concise Summary & HR Advice
+- **Outcome**: The AI advisor now produces a `concise_summary` (one-sentence why qualified/not qualified) and `hr_advice` (actionable next-step recommendation) alongside the existing per-requirement detail. The frontend surfaces these prominently so HR sees the verdict reason and recommendation at a glance, with per-requirement evidence available as an expandable section.
+  - [`backend/app/ai/schemas/ai_advice.py`](../backend/app/ai/schemas/ai_advice.py): Added `concise_summary` and `hr_advice` optional string fields to `AdvisorOutput`.
+  - [`backend/app/ai/prompts/screening_advisor.py`](../backend/app/ai/prompts/screening_advisor.py): Extended system prompt with instructions to generate `concise_summary` and `hr_advice` from verified evidence only. Updated user prompt JSON shape rules to include the two new fields.
+  - [`frontend/src/components/AISummaryCard.tsx`](../frontend/src/components/AISummaryCard.tsx): Redesigned to show `concise_summary` as an indigo "Why this verdict" callout and `hr_advice` as an amber "Recommendation for HR" callout. Per-requirement detail is now inside a `<details>` expandable element.
+  - [`frontend/src/components/ScreeningSummaryCard.tsx`](../frontend/src/components/ScreeningSummaryCard.tsx): Same concise summary + advice + collapsible per-requirement detail pattern applied to the "AI assessment" section.
+  - [`frontend/src/components/ScreeningSummaryCard.tsx` / `AISummaryCard.tsx`]: Added `Sparkles` and `ArrowRight` lucide-react icons.
+- **Why**: The client brief's Gap 4 (opaque scores) requires "score + explanation + evidence." A one-line concise summary gives HR the answer immediately; the expandable per-requirement detail preserves full explainability for the candidate who needs deeper review. The `hr_advice` field turns the AI from a classifier into an assistant that tells HR what to do next, aligning with "AI assists, never controls."
+- **Exact Commands**:
+  ```bash
+  cd backend
+  # Verify lint (no new schema fields need a migration — they are optional and stored in existing JSONB)
+  uv run --locked --no-sync ruff check app/ai app/providers app/services
+  cd frontend
+  # Verify type-check and lint
+  pnpm tsc --noEmit
+  pnpm lint
+  ```
+- **Observable Result**: Backend lint clean. Frontend `tsc` and `lint` green. On the Review page, HR sees a concise "Why this verdict" sentence and a "Recommendation for HR" action box at the top of the AI Summary card; clicking "Per-requirement detail" expands the full per-requirement breakdown with evidence.
+- **Verification**:
+  ```bash
+  uv run --locked --no-sync ruff check app/ai app/providers app/services
+  pnpm tsc --noEmit
+  pnpm lint
+  ```
+- **Checkpoint**: AI advisor returns concise summary + advice alongside per-requirement data. Frontend surfaces them prominently with collapsible detail. Explainability and the "AI assists, never controls" principle are preserved.
+
+---
+
 ### Slice 4.4: Job Description Free-Text Field
 - **Outcome**: Added a free-text `description` column to the `jobs` table so HR can paste the full job posting. The AI advisor reads this rich text instead of the assembled structured fields, giving it full context (responsibilities, preferred qualifications, work arrangement, etc.). The structured fields (`required_skills`, `education_requirements`, `min_experience_years`, `score_weights`) remain for the deterministic screening engine.
   - [`backend/alembic/versions/0003_add_job_description.py`](../backend/alembic/versions/0003_add_job_description.py): Migration adds `description TEXT` column to `jobs`.
