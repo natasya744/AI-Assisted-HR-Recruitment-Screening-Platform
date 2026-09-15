@@ -195,7 +195,7 @@ export default function Dashboard() {
             <Sparkles className="size-3 text-indigo-600" />
             Recruitment Command Center
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: '#312e81' }}>
             HR Screening Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -408,7 +408,7 @@ export default function Dashboard() {
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
               <Search className="size-6" />
             </div>
-            <h3 className="text-base font-semibold text-slate-800">No applications found</h3>
+            <h3 className="text-base font-semibold" style={{ color: '#1e293b' }}>No applications found</h3>
             <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
               {hasActiveFilters
                 ? "No candidates matched your current filter criteria. Try clearing some filters."

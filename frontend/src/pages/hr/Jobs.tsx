@@ -146,7 +146,7 @@ export default function JobsPage() {
               Back to Dashboard
             </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2" style={{ color: '#312e81' }}>
             Job Requisitions
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -181,7 +181,7 @@ export default function JobsPage() {
           <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
             <Briefcase className="size-6" />
           </div>
-          <h3 className="text-base font-semibold text-slate-800">No Job Requisitions Yet</h3>
+          <h3 className="text-base font-semibold" style={{ color: '#1e293b' }}>No Job Requisitions Yet</h3>
           <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
             Create your first job posting to start receiving and screening candidate applications.
           </p>
@@ -212,7 +212,7 @@ export default function JobsPage() {
                             : "Entry level"}
                         </span>
                       </div>
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      <h3 className="text-lg font-bold group-hover:text-indigo-600 transition-colors" style={{ color: '#1e293b' }}>
                         {job.title}
                       </h3>
                     </div>
@@ -339,7 +339,7 @@ export default function JobsPage() {
                   <Briefcase className="size-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-xl font-bold" style={{ color: '#312e81' }}>
                     {editingJob ? "Edit Job Requisition" : "Create New Job Requisition"}
                   </h2>
                   <p className="text-xs text-slate-500">

@@ -133,18 +133,20 @@ body {
   min-height: 100vh;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--heading);
-  color: var(--text-h);
-  margin: 0;
-}
-p {
-  margin: 0;
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--heading);
+    color: var(--text-h);
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
 }
 
 code,
