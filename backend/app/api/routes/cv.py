@@ -6,11 +6,12 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.security import get_current_hr_user
 from app.db.session import get_db
 from app.repositories import application_repository
 from app.services.storage_service import get_storage_client
 
-router = APIRouter(prefix="/api/cv", tags=["cv"])
+router = APIRouter(prefix="/api/cv", tags=["cv"], dependencies=[Depends(get_current_hr_user)])
 
 DbSession = Annotated[Session, Depends(get_db)]
 

@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_hr_user
 from app.db.session import get_db
 from app.repositories import (
     application_repository,
@@ -19,7 +20,7 @@ from app.services import application_service, storage_service
 from app.services.email_draft_service import EmailDraftError, generate_email_draft
 from app.services.screening_service import assess_qualification
 
-router = APIRouter(prefix="/api/hr", tags=["hr"])
+router = APIRouter(prefix="/api/hr", tags=["hr"], dependencies=[Depends(get_current_hr_user)])
 
 DbSession = Annotated[Session, Depends(get_db)]
 

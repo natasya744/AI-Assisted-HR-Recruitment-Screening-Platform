@@ -1,20 +1,28 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   UserPlus,
   Briefcase,
   Sparkles,
-  CheckCircle2,
   FileCheck2,
+  LogOut,
+  LogIn,
+  User,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Layout() {
   const location = useLocation();
+  const { user, signOut, isAuthenticated } = useAuth();
 
   const navItems = [
     { label: "Overview", href: "/", icon: Sparkles, exact: true },
-    { label: "HR Dashboard", href: "/hr", icon: LayoutDashboard },
-    { label: "Job Management", href: "/hr/jobs", icon: Briefcase },
+    ...(isAuthenticated
+      ? [
+          { label: "HR Dashboard", href: "/hr", icon: LayoutDashboard },
+          { label: "Job Management", href: "/hr/jobs", icon: Briefcase },
+        ]
+      : []),
   ];
 
   const isActive = (itemHref: string, exact?: boolean) => {
@@ -81,6 +89,30 @@ export default function Layout() {
               AI Screening Active
             </div>
 
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
+                  <User className="size-3.5 text-indigo-500" />
+                  <span className="font-medium text-slate-700">{user}</span>
+                </span>
+                <button
+                  onClick={signOut}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-rose-600 transition-all shadow-2xs"
+                >
+                  <LogOut className="size-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-2xs"
+              >
+                <LogIn className="size-3.5" />
+                <span className="hidden sm:inline">HR Login</span>
+              </Link>
+            )}
+
             <Link
               to="/apply"
               className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 transition-all hover:shadow-md"
@@ -129,8 +161,8 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span className="flex items-center gap-1 text-[11px]">
-              <CheckCircle2 className="size-3.5 text-emerald-500" />
-              Supabase Storage & Azure AI Document Intelligence
+              <FileCheck2 className="size-3.5 text-emerald-500" />
+              Supabase Storage & OpenAI Extraction
             </span>
           </div>
         </div>

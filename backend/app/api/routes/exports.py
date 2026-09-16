@@ -4,10 +4,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_hr_user
 from app.db.session import get_db
 from app.services import export_service
 
-router = APIRouter(prefix="/api/exports", tags=["exports"])
+router = APIRouter(
+    prefix="/api/exports", tags=["exports"],
+    dependencies=[Depends(get_current_hr_user)],
+)
 
 DbSession = Annotated[Session, Depends(get_db)]
 
