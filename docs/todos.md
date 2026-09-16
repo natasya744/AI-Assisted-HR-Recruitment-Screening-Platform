@@ -107,14 +107,25 @@ Each phase is a **working, verifiable slice** — do not move on until its check
 
 ---
 
+# Phase 7 — Candidate Email
+
+**Goal:** notification fires only after an HR decision.
+
+- [ ] **7.1** `email_service.py`: draft approval/rejection email; transport behind a `EmailTransport` interface.
+- [ ] **7.2** MVP transport: console/file (`EMAIL_TRANSPORT=file`, `EMAIL_OUT_DIR`) — no external service yet.
+- [ ] **7.3** Trigger on decision; log the rendered copy to `audit_log` (`EMAILED`).
+- [ ] **Checkpoint:** approving/rejecting produces the correct email file + audit entry.
+
+---
+
 # Phase 8 — Excel Export
 
 **Goal:** HR downloads `.xlsx` from Postgres.
 
-- [x] **8.1** Add **`openpyxl==3.1.5`** *(approved)* to the backend; `export_service.py` builds a workbook from the DB (name, email, position, applied, score, screening decision, HR decision, decision date).
-- [x] **8.2** Route `GET /api/exports/applications` returning `spreadsheetml.sheet` with a download header.
-- [x] **8.3** Frontend: export button (optionally filtered by job).
-- [x] **Checkpoint:** file opens in Excel/Numbers; columns match the dashboard. See `docs/guides/excel-export-setup.md`.
+- [ ] **8.1** Add **`openpyxl==3.1.5`** *(approved)* to the backend; `export_service.py` builds a workbook from the DB (name, email, position, applied, score, screening decision, HR decision, decision date).
+- [ ] **8.2** Route `GET /api/exports/applications` returning `spreadsheetml.sheet` with a download header.
+- [ ] **8.3** Frontend: export button (optionally filtered by job).
+- [ ] **Checkpoint:** file opens in Excel/Numbers; columns match the dashboard. See `docs/guides/excel-export-setup.md`.
 
 ---
 

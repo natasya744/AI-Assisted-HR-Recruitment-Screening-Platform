@@ -134,6 +134,7 @@ body {
 }
 
 @layer base {
+
   h1,
   h2,
   h3,
@@ -144,6 +145,7 @@ body {
     color: var(--text-h);
     margin: 0;
   }
+
   p {
     margin: 0;
   }
@@ -243,8 +245,14 @@ code {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;}
+    @apply border-border outline-ring/50;
+  }
+
   body {
-    @apply bg-background text-foreground;}
+    @apply bg-background text-foreground;
+  }
+
   html {
-    @apply font-sans;}}
+    @apply font-sans;
+  }
+}
