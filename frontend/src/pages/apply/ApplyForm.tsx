@@ -450,11 +450,10 @@ export default function ApplyForm() {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all ${
-                    isDragging
-                      ? "border-indigo-500 bg-indigo-50/80 scale-[0.99]"
-                      : "border-slate-300 bg-white hover:border-indigo-400 hover:bg-slate-50/50 shadow-2xs"
-                  }`}
+                  className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all ${isDragging
+                    ? "border-indigo-500 bg-indigo-50/80 scale-[0.99]"
+                    : "border-slate-300 bg-white hover:border-indigo-400 hover:bg-slate-50/50 shadow-2xs"
+                    }`}
                 >
                   <div className="flex size-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform mb-3">
                     <UploadCloud className="size-6" />
