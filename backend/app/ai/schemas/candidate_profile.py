@@ -48,6 +48,10 @@ class CandidateProfileExtracted(BaseModel):
     phone: str | None = Field(None, description="Phone number found on the CV")
     location: str | None = Field(None, description="City, region, or country")
     linkedin_url: str | None = Field(None, description="LinkedIn profile URL if present")
+    github_url: str | None = Field(None, description="GitHub profile URL if present")
+    portfolio_url: str | None = Field(
+        None, description="Personal website, portfolio, or blog URL if present"
+    )
     professional_summary: str | None = Field(
         None, description="Professional summary or objective statement"
     )

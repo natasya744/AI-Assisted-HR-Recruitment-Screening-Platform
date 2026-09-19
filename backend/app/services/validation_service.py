@@ -73,6 +73,8 @@ def deterministic_merge(
         "phone",
         "location",
         "linkedin_url",
+        "github_url",
+        "portfolio_url",
         "professional_summary",
     ):
         val = getattr(profile, identity_field, None)

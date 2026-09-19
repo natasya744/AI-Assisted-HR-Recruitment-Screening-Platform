@@ -7,6 +7,8 @@ RESUME_EXTRACTION_SYSTEM_PROMPT = (
     "- phone: Phone number found on the CV.\n"
     "- location: City, region, or country.\n"
     "- linkedin_url: LinkedIn profile URL if present.\n"
+    "- github_url: GitHub profile URL if present.\n"
+    "- portfolio_url: Personal website, portfolio, blog, or project showcase URL if present.\n"
     "- professional_summary: A concise professional summary or objective statement.\n"
     "- skills: A comprehensive list of technical tools, frameworks, programming languages, libraries, "
     "methodologies, and professional competencies mentioned throughout the CV (from skills sections, work "

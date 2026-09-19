@@ -16,6 +16,9 @@ import {
   Sparkles,
   Loader2,
   X,
+  Eye,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
@@ -46,6 +49,7 @@ export default function ApplyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [showJobModal, setShowJobModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -293,12 +297,30 @@ export default function ApplyForm() {
                 </div>
               </div>
 
-              {selectedJob?.description && (
-                <div className="mt-3 rounded-xl bg-white p-3.5 border border-slate-200/70 text-xs text-slate-600 space-y-1.5">
-                  <span className="font-semibold text-slate-800 block">Job Overview:</span>
-                  <p className="line-clamp-2 leading-relaxed text-slate-500">{selectedJob.description}</p>
+              {selectedJob && (
+                <div className="mt-3 rounded-2xl bg-white p-4 border border-slate-200/80 text-xs text-slate-600 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-800 text-xs flex items-center gap-1.5">
+                      <Briefcase className="size-3.5 text-indigo-600" />
+                      Job Overview & Requirements
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowJobModal(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer"
+                    >
+                      <Eye className="size-3 text-indigo-600" />
+                      <span>View Full Job Details</span>
+                    </button>
+                  </div>
+                  {selectedJob.description && (
+                    <p className="line-clamp-2 leading-relaxed text-slate-500">
+                      {selectedJob.description}
+                    </p>
+                  )}
                   {selectedJob.required_skills?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[11px] font-medium text-slate-400 mr-1">Skills:</span>
                       {selectedJob.required_skills.map((skill) => (
                         <span
                           key={skill}
@@ -520,6 +542,126 @@ export default function ApplyForm() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* Full Job Details Modal */}
+      {showJobModal && selectedJob && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setShowJobModal(false)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 p-6 sm:p-7 border-b border-slate-100 bg-slate-50/70">
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
+                  <Briefcase className="size-3 text-indigo-600" />
+                  Position Details
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  {selectedJob.title}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1 font-medium bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                    <Briefcase className="size-3 text-slate-400" />
+                    Min Experience: <strong className="text-slate-800">{selectedJob.min_experience_years} years</strong>
+                  </span>
+                  {selectedJob.is_open && (
+                    <span className="inline-flex items-center gap-1 font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                      <CheckCircle2 className="size-3 text-emerald-600" />
+                      Active Opening
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowJobModal(false)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto p-6 sm:p-7 space-y-6 flex-1 text-sm">
+              {/* Full Description */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <BookOpen className="size-3.5 text-indigo-600" />
+                  Job Description & Responsibilities
+                </h3>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 sm:p-5 text-slate-700 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
+                  {selectedJob.description || "No detailed description provided."}
+                </div>
+              </div>
+
+              {/* Required Skills */}
+              {selectedJob.required_skills?.length > 0 && (
+                <div className="space-y-2.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Required Skills & Technical Competencies ({selectedJob.required_skills.length})
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.required_skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-xl border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-medium text-indigo-700"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Education Requirements */}
+              {selectedJob.education_requirements?.length > 0 && (
+                <div className="space-y-2.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <GraduationCap className="size-3.5 text-indigo-600" />
+                    Educational Background Requirements
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedJob.education_requirements.map((edu) => (
+                      <span
+                        key={edu}
+                        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+                      >
+                        {edu}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowJobModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowJobModal(false)}
+                className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors shadow-sm cursor-pointer"
+              >
+                Continue Application
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
