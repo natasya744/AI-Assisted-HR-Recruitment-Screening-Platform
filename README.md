@@ -1,4 +1,4 @@
-# AI-Assisted HR Recruitment Screening Platform
+# AI-Assisted HR Recruitment Screening 
 
 An AI-assisted recruitment platform that reduces repetitive HR work during candidate screening.
 
