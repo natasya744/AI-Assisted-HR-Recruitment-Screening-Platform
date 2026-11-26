@@ -93,3 +93,12 @@ class JobRead(BaseModel):
     score_weights: dict[str, float]
     is_open: bool
     created_at: datetime | None = None
+
+
+class PublicJobRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    description: str | None = None
+    is_open: bool

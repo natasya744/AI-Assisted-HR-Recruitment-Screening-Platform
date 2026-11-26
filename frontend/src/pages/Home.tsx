@@ -15,6 +15,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import PublicJobList from "@/components/PublicJobList";
+
+const isInternal = import.meta.env.VITE_APP_MODE === "internal";
 
 export default function Home() {
   return (
@@ -23,15 +26,24 @@ export default function Home() {
       <section className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white px-6 py-12 sm:px-12 sm:py-16 text-center shadow-2xs">
         <div className="mx-auto max-w-3xl space-y-5">
           <Badge variant="secondary" className="px-3 py-1 text-xs font-medium text-neutral-700">
-            <Sparkles className="size-3.5 text-neutral-700" />
-            AI Screening & Candidate Assessment
+            {isInternal ? (
+              <>
+                <Sparkles className="size-3.5 text-neutral-700" />
+                AI Screening & Candidate Assessment
+              </>
+            ) : (
+              <>Candidate Application Portal</>
+            )}
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl lg:text-5xl text-balance">
-            Streamlined Recruitment with Explainable AI
+            {isInternal
+              ? "Streamlined Recruitment with Explainable AI"
+              : "Your Next Opportunity Starts Here"}
           </h1>
           <p className="mx-auto max-w-2xl text-sm sm:text-base leading-relaxed text-neutral-500 text-pretty">
-            End-to-end CV processing, transparent scoring criteria, deterministic rule matching,
-            and human-in-the-loop decision workflows.
+            {isInternal
+              ? "End-to-end CV processing, transparent scoring criteria, deterministic rule matching, and human-in-the-loop decision workflows."
+              : "Submit your resume and contact details. Our team will review your application and be in touch with you soon."}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -43,31 +55,38 @@ export default function Home() {
               Apply for a Position
               <ArrowRight className="size-4" />
             </Link>
-            <Link
-              to="/hr"
-              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "px-6")}
-            >
-              <LayoutDashboard className="size-4 text-neutral-600" />
-              Open HR Dashboard
-            </Link>
+            {isInternal && (
+              <Link
+                to="/hr"
+                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "px-6")}
+              >
+                <LayoutDashboard className="size-4 text-neutral-600" />
+                Open HR Dashboard
+              </Link>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Main Portals Grid */}
+      {!isInternal && <PublicJobList />}
+
+      {/* Main Portals Grid — internal only */}
+      {isInternal && (
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-neutral-950">
-              Platform Portals
+              {isInternal ? "Platform Portals" : "Apply for a Position"}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-              Access the candidate application portal, HR screening dashboard, and job management
+              {isInternal
+                ? "Access the candidate application portal, HR screening dashboard, and job management"
+                : "Choose an open position and submit your resume."}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className={cn("grid grid-cols-1 gap-5", isInternal && "md:grid-cols-3")}>
           {/* Portal 1: Apply */}
           <Card className="justify-between transition-colors hover:border-neutral-300">
             <div className="space-y-4">
@@ -107,6 +126,8 @@ export default function Home() {
             </CardFooter>
           </Card>
 
+          {isInternal && (
+            <>
           {/* Portal 2: HR Dashboard */}
           <Card className="justify-between border-neutral-900/20 bg-white transition-colors hover:border-neutral-900/40">
             <div className="space-y-4">
@@ -184,10 +205,14 @@ export default function Home() {
               </Link>
             </CardFooter>
           </Card>
+            </>
+          )}
         </div>
       </section>
+      )}
 
-      {/* Architecture & AI Transparency Highlights */}
+      {/* Architecture & AI Transparency Highlights — internal only */}
+      {isInternal && (
       <Card>
         <CardHeader>
           <CardTitle>How the Screening Engine Works</CardTitle>
@@ -239,6 +264,7 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

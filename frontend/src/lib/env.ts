@@ -1,7 +1,10 @@
+export type AppMode = "public" | "internal";
+
 export type Environment = {
   apiBaseUrl: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  appMode: AppMode;
 };
 
 function requireEnv(name: string, value: string | undefined): string {
@@ -9,6 +12,14 @@ function requireEnv(name: string, value: string | undefined): string {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+function requireAppMode(value: string | undefined): AppMode {
+  const raw = requireEnv("VITE_APP_MODE", value);
+  if (raw !== "public" && raw !== "internal") {
+    throw new Error(`Invalid VITE_APP_MODE: ${raw}. Expected "public" or "internal".`);
+  }
+  return raw;
 }
 
 export const env: Environment = {
@@ -24,4 +35,5 @@ export const env: Environment = {
     "VITE_SUPABASE_ANON_KEY",
     import.meta.env.VITE_SUPABASE_ANON_KEY,
   ),
+  appMode: requireAppMode(import.meta.env.VITE_APP_MODE),
 };

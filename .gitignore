@@ -37,6 +37,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Local testing guide (not for version control)
+setup_testing.md
+
 # Logs
 *.log
 logs/

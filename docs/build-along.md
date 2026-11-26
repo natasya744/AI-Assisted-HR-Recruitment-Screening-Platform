@@ -766,3 +766,66 @@ This guide documents every completed slice, explaining what was built, why, exac
   - `oxlint` passes with 0 errors (6 pre-existing warnings).
   - `tsc -b && vite build` compiles cleanly and bundles `Geist Variable` woff2 assets into `dist/assets/`.
 - **Checkpoint**: Frontend is redesigned in clean black/white/grey with reusable shadcn components, consistent table spacing, and `Geist Variable` typography, with all existing fields preserved.
+
+---
+
+## Phase 12 — Public Candidate Site vs Internal HR Tool
+
+### Slice 12.1: Separate candidate and HR surfaces, public job links, and API hardening
+
+- **Outcome**: Split the single shared UI into a public candidate site and an internal HR tool, with a job-specific shareable apply link and a read-only public jobs API.
+  - [`frontend/src/components/PublicLayout.tsx`](../frontend/src/components/PublicLayout.tsx): new candidate-only shell (logo + Careers label, no HR navigation, no sign-in/sign-out, candidate footer).
+  - [`frontend/src/App.tsx`](../frontend/src/App.tsx): routes are selected at build time by `VITE_APP_MODE`. Public mode registers only `/`, `/apply`, `/apply/:jobId`; internal mode adds `/login` and the protected `/hr/*` routes. HR pages are build-gated lazy imports, so the public bundle contains no HR code.
+  - [`frontend/src/lib/env.ts`](../frontend/src/lib/env.ts): added validated `appMode`; [`frontend/src/lib/types.ts`](../frontend/src/lib/types.ts): added `PublicJob` (id/title/description/is_open only).
+  - [`frontend/src/pages/apply/ApplyForm.tsx`](../frontend/src/pages/apply/ApplyForm.tsx): reads the job id from the URL, loads it from the public endpoint, locks the job (no dropdown), renders description only, removes the HR login link and the full-details modal that exposed skills/education, and uses neutral copy ("review by our team", "Waiting for processing…").
+  - [`frontend/src/pages/hr/Jobs.tsx`](../frontend/src/pages/hr/Jobs.tsx): "Public Apply Link" now points to `/apply/<job-id>` and a "Copy Apply Link" button writes the absolute URL to the clipboard.
+  - [`frontend/src/pages/Home.tsx`](../frontend/src/pages/Home.tsx): internal-only HR portals and screening-engine details are build-gated out of the public bundle; public copy is candidate-facing.
+  - [`backend/app/schemas/job.py`](../backend/app/schemas/job.py): added `PublicJobRead` with only `id`, `title`, `description`, `is_open`.
+  - [`backend/app/api/routes/jobs.py`](../backend/app/api/routes/jobs.py): added `public_router` (`GET /api/public/jobs`, `GET /api/public/jobs/{job_id}`, open jobs only) and protected every internal `/api/jobs` route with `Depends(get_current_hr_user)`.
+  - [`backend/app/main.py`](../backend/app/main.py): registered `jobs.public_router`.
+  - [`setup_testing.md`](../setup_testing.md): documented the exact local run commands, two-endpoint walkthrough, and security checks.
+- **Why**: Candidates previously shared one shell with HR — they saw HR Dashboard/Job Management links and sign-in state, the "Public Apply Link" was generic, and unauthenticated callers could read or even write jobs via `/api/jobs`. The public surface now exposes only what a candidate needs, while all job writes and the full job schema stay behind the JWT gate.
+- **Exact Commands**:
+  ```bash
+  # Terminal 1 — shared backend
+  cd backend && uv run --locked --no-sync uvicorn app.main:app --reload --port 8001
+  # Terminal 2 — internal HR UI
+  cd frontend && VITE_APP_MODE=internal pnpm dev --port 5174
+  # Terminal 3 — public candidate UI
+  cd frontend && VITE_APP_MODE=public pnpm dev --port 5175
+  # Verification
+  cd backend && uv run --locked --no-sync ruff check app alembic scripts
+  cd frontend && VITE_APP_MODE=public pnpm tsc --noEmit && VITE_APP_MODE=public pnpm lint && VITE_APP_MODE=public pnpm build
+  cd frontend && VITE_APP_MODE=internal pnpm tsc --noEmit && VITE_APP_MODE=internal pnpm lint && VITE_APP_MODE=internal pnpm build
+  ```
+- **Observable Result**:
+  - `ruff` clean; `tsc`/`lint`/`build` green for both modes (lint has only pre-existing warnings).
+  - Public bundle is ~371 kB and contains no "HR Dashboard", "/hr/review", or "Manage Job Postings" strings; internal bundle retains them.
+  - `curl /api/public/jobs` returns only `id`, `title`, `description`, `is_open`; unknown job → 404.
+  - Unauthenticated `GET/POST /api/jobs` → 401; `POST /api/applications` → 201.
+  - Live public page: no HR nav/auth controls, locked job title + description, no AI wording; invalid job id shows "Position unavailable".
+  - Full submission smoke test reached `HR_REVIEW` with `EXTRACTED` and `SCREENED` audit events and a deterministic score.
+- **Checkpoint**: HR and candidate experiences are cleanly separated, job writes and scoring criteria are protected, and the complete apply → screen → review flow works end to end.
+
+---
+
+## Phase 12.2: Candidate job list synced with HR job management
+
+- **Outcome**: Candidates can now discover open roles directly on the public site; the list is read live from the same database HR uses to create jobs.
+  - [`frontend/src/components/PublicJobList.tsx`](../frontend/src/components/PublicJobList.tsx): new component fetching `GET /api/public/jobs`, rendering each open job as a card with title, description excerpt, and an `Apply for this position` link to `/apply/<job-id>`. Handles loading, error, and empty states.
+  - [`frontend/src/pages/Home.tsx`](../frontend/src/pages/Home.tsx): public mode renders `PublicJobList` below the hero; internal mode is unchanged.
+  - [`frontend/src/pages/apply/ApplyForm.tsx`](../frontend/src/pages/apply/ApplyForm.tsx): visiting `/apply` without a job id now shows the same job list instead of "Position unavailable", so the hero button leads to a working job picker. Direct `/apply/<job-id>` links still lock to one job.
+- **Why**: HR and candidates previously shared the database but the candidate UI had no way to list jobs — the hero button led to a dead end. Because both surfaces use the same Supabase Postgres, a job created in HR appears on the candidate site immediately with no manual sync step.
+- **Exact Commands**:
+  ```bash
+  cd backend && uv run --locked --no-sync ruff check app alembic scripts
+  cd frontend && pnpm tsc --noEmit && pnpm lint
+  VITE_APP_MODE=public pnpm build && VITE_APP_MODE=internal pnpm build
+  ```
+- **Observable Result**:
+  - Candidate home and `/apply` both list every open job from HR (AI Engineer, Automation engineer) with working apply links.
+  - A job inserted while the page was closed appeared on the next page load; the verification job was removed afterwards.
+  - Direct job links remain locked to a single job; invalid ids still show "Position unavailable".
+  - `ruff`, `tsc`, `lint`, and both builds pass.
+- **Checkpoint**: HR job management and the candidate application page are synchronized through the public read-only jobs endpoint; candidates can pick an open role and apply without any manual data transfer.
+

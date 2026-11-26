@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, type FormEvent, type DragEvent } from "react";
-import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   User,
   Mail,
@@ -13,31 +13,21 @@ import {
   Briefcase,
   ArrowRight,
   RotateCcw,
-  Sparkles,
   Loader2,
   X,
-  Eye,
-  BookOpen,
-  GraduationCap,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { ApiError } from "@/lib/http";
 import { getErrorMessage } from "@/lib/errors";
-import type { ApplicationCreated, Job } from "@/lib/types";
+import type { ApplicationCreated, PublicJob } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import PublicJobList from "@/components/PublicJobList";
 
 const MAX_CV_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -50,9 +40,10 @@ function validateCv(file: File): string | null {
 }
 
 export default function ApplyForm() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [jobsError, setJobsError] = useState<string | null>(null);
-  const [jobId, setJobId] = useState("");
+  const { jobId } = useParams<{ jobId: string }>();
+  const [job, setJob] = useState<PublicJob | null>(null);
+  const [jobLoading, setJobLoading] = useState(true);
+  const [jobError, setJobError] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -64,26 +55,39 @@ export default function ApplyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
-  const [showJobModal, setShowJobModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!jobId) {
+      setJobLoading(false);
+      return;
+    }
     let cancelled = false;
+    setJobLoading(true);
     api
-      .get<Job[]>("/api/jobs")
-      .then((openJobs) => {
+      .get<PublicJob>(`/api/public/jobs/${jobId}`)
+      .then((data) => {
         if (cancelled) return;
-        setJobs(openJobs);
-        if (openJobs.length > 0) setJobId(openJobs[0].id);
+        setJob(data);
+        setJobError(null);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setJobsError(getErrorMessage(err));
+        if (cancelled) return;
+        setJob(null);
+        setJobError(
+          err instanceof ApiError && err.status === 404
+            ? "This position is no longer available."
+            : getErrorMessage(err),
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setJobLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [jobId]);
 
   function handleFileSelected(file: File | null) {
     setCvError(null);
@@ -128,7 +132,6 @@ export default function ApplyForm() {
     setCv(null);
     setCvError(null);
     setError(null);
-    if (jobs.length > 0) setJobId(jobs[0].id);
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -156,9 +159,6 @@ export default function ApplyForm() {
     }
   }
 
-  const selectedJob = jobs.find((j) => j.id === jobId);
-
-  // Success Screen
   if (applicationId) {
     return (
       <div className="mx-auto max-w-xl py-8">
@@ -172,9 +172,8 @@ export default function ApplyForm() {
               Application Submitted
             </h1>
             <p className="text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
-              Thank you for applying. Just to inform you, your application has been securely
-              received by our team. We will be reviewing your application and will be in touch
-              with you again soon.
+              Thank you for applying. Your application has been securely received by our team.
+              We will review it and be in touch with you soon.
             </p>
           </div>
 
@@ -191,7 +190,6 @@ export default function ApplyForm() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200 pb-6">
         <div>
           <Badge variant="secondary" className="mb-2">
@@ -202,98 +200,46 @@ export default function ApplyForm() {
             Apply for a Position
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            Submit your resume and contact information for automated AI evaluation and recruiter review.
+            Submit your resume and contact information for review by our team.
           </p>
         </div>
-
-        <Link
-          to="/hr"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "self-start sm:self-center")}
-        >
-          Recruiter Login
-          <ArrowRight className="size-3.5 text-neutral-400" />
-        </Link>
       </div>
 
-      {jobsError ? (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4 shrink-0 mt-0.5" />
-          <AlertDescription>Error loading job listings: {jobsError}</AlertDescription>
-        </Alert>
-      ) : jobs.length === 0 ? (
+      {!jobId ? (
+        <PublicJobList />
+      ) : jobLoading ? (
+        <Card className="p-12 text-center space-y-3">
+          <Loader2 className="mx-auto size-6 animate-spin text-neutral-400" />
+          <p className="text-xs text-neutral-500">Loading position…</p>
+        </Card>
+      ) : jobError || !job ? (
         <Card className="p-12 text-center space-y-3">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-400">
             <Briefcase className="size-6" />
           </div>
-          <h3 className="text-base font-semibold text-neutral-900">No Open Positions</h3>
+          <h3 className="text-base font-semibold text-neutral-900">Position unavailable</h3>
           <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-            There are currently no active job requisitions. Please check back later or create a job in the HR portal.
+            {jobError ?? "This position is no longer available."}
           </p>
-          <div className="pt-2">
-            <Link to="/hr/jobs" className={cn(buttonVariants({ variant: "default", size: "sm" }))}>
-              Create a Job Posting
-            </Link>
-          </div>
         </Card>
       ) : (
         <form onSubmit={onSubmit} className="space-y-6">
           <Card className="overflow-hidden py-0 gap-0">
-            {/* Section 1: Role Selection */}
-            <div className="border-b border-neutral-200 bg-neutral-50/60 p-6 sm:p-7 space-y-3">
-              <Label htmlFor="job" className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
-                1. Select Target Position *
+            <div className="border-b border-neutral-200 bg-neutral-50/60 p-6 sm:p-7 space-y-2.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
+                1. Applying For
               </Label>
-              <Select
-                id="job"
-                value={jobId}
-                onChange={(e) => setJobId(e.target.value)}
-                className="h-10"
-                required
-              >
-                {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title} — ({job.min_experience_years}y min exp)
-                  </option>
-                ))}
-              </Select>
-
-              {selectedJob && (
-                <div className="rounded-xl bg-white p-4 border border-neutral-200 text-xs text-neutral-600 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-neutral-900 flex items-center gap-1.5">
-                      <Briefcase className="size-3.5 text-neutral-500" />
-                      Job Overview & Requirements
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="xs"
-                      onClick={() => setShowJobModal(true)}
-                    >
-                      <Eye className="size-3" />
-                      <span>View Full Job Details</span>
-                    </Button>
-                  </div>
-                  {selectedJob.description && (
-                    <p className="line-clamp-2 leading-relaxed text-neutral-500">
-                      {selectedJob.description}
-                    </p>
-                  )}
-                  {selectedJob.required_skills?.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[11px] font-medium text-neutral-400 mr-1">Skills:</span>
-                      {selectedJob.required_skills.map((skill) => (
-                        <Badge key={skill} variant="secondary" className="text-[11px]">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center gap-2">
+                <Briefcase className="size-4 text-neutral-500" />
+                <span className="font-semibold text-neutral-900">{job.title}</span>
+              </div>
+              {job.description && (
+                <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-600">
+                  {job.description}
+                </p>
               )}
             </div>
 
-            {/* Section 2: Personal & Contact Information */}
             <CardContent className="p-6 sm:p-7 space-y-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 2. Personal Information
@@ -378,7 +324,6 @@ export default function ApplyForm() {
               </div>
             </CardContent>
 
-            {/* Section 3: CV Upload Dropzone */}
             <div className="border-t border-neutral-200 bg-neutral-50/50 p-6 sm:p-7 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
@@ -417,7 +362,7 @@ export default function ApplyForm() {
                     Click to browse or drag and drop your PDF CV
                   </p>
                   <p className="mt-1 text-xs text-neutral-400">
-                    Our AI will analyze your experience, skills, and education automatically
+                    Your resume will be reviewed as part of your application.
                   </p>
                 </div>
               ) : (
@@ -477,7 +422,6 @@ export default function ApplyForm() {
             </Alert>
           )}
 
-          {/* Submit Action */}
           <div className="flex items-center justify-end pt-1">
             <Button
               type="submit"
@@ -492,7 +436,7 @@ export default function ApplyForm() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="size-4" />
+                  <ArrowRight className="size-4" />
                   <span>Submit Application</span>
                 </>
               )}
@@ -500,90 +444,6 @@ export default function ApplyForm() {
           </div>
         </form>
       )}
-
-      {/* Full Job Details Modal */}
-      <Dialog open={showJobModal && !!selectedJob} onOpenChange={setShowJobModal}>
-        {selectedJob && (
-          <DialogContent
-            onClose={() => setShowJobModal(false)}
-            className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
-          >
-            <DialogHeader className="p-6 border-b border-neutral-200 bg-neutral-50/70">
-              <Badge variant="outline" className="w-fit">
-                <Briefcase className="size-3" />
-                Position Details
-              </Badge>
-              <DialogTitle className="text-xl sm:text-2xl mt-1">
-                {selectedJob.title}
-              </DialogTitle>
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-neutral-500">
-                <Badge variant="outline" className="bg-white">
-                  <Briefcase className="size-3 text-neutral-400" />
-                  Min Experience: <strong className="text-neutral-900">{selectedJob.min_experience_years} years</strong>
-                </Badge>
-                {selectedJob.is_open && (
-                  <Badge variant="success">
-                    <CheckCircle2 className="size-3" />
-                    Active Opening
-                  </Badge>
-                )}
-              </div>
-            </DialogHeader>
-
-            <div className="overflow-y-auto p-6 space-y-6 flex-1 text-sm">
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
-                  <BookOpen className="size-3.5 text-neutral-700" />
-                  Job Description & Responsibilities
-                </h3>
-                <div className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 text-neutral-700 leading-relaxed text-xs sm:text-sm whitespace-pre-line">
-                  {selectedJob.description || "No detailed description provided."}
-                </div>
-              </div>
-
-              {selectedJob.required_skills?.length > 0 && (
-                <div className="space-y-2.5">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                    Required Skills & Technical Competencies ({selectedJob.required_skills.length})
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedJob.required_skills.map((skill) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedJob.education_requirements?.length > 0 && (
-                <div className="space-y-2.5">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
-                    <GraduationCap className="size-3.5 text-neutral-700" />
-                    Educational Background Requirements
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedJob.education_requirements.map((edu) => (
-                      <Badge key={edu} variant="outline">
-                        {edu}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="p-4 sm:p-5 border-t border-neutral-200 bg-neutral-50/50">
-              <Button type="button" variant="outline" size="sm" onClick={() => setShowJobModal(false)}>
-                Close
-              </Button>
-              <Button type="button" size="sm" onClick={() => setShowJobModal(false)}>
-                Continue Application
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 }

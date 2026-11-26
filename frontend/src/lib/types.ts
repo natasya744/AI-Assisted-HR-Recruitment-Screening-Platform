@@ -9,6 +9,13 @@ export type Job = {
   is_open: boolean;
 };
 
+export type PublicJob = {
+  id: string;
+  title: string;
+  description: string | null;
+  is_open: boolean;
+};
+
 export type JobCreate = {
   title: string;
   description: string;

@@ -1,123 +1,156 @@
-# AI-Assisted HR Recruitment Screening 
+# AI-Assisted HR Recruitment Screening Platform
 
-An AI-assisted recruitment platform that reduces repetitive HR work during candidate screening.
+An AI-assisted recruitment platform that automates repetitive CV processing while keeping hiring decisions strictly with HR.
 
-The system accepts applications through a website, processes candidate documents, extracts structured information using AI, calculates a transparent screening score, and presents the results to HR. HR remains responsible for the final decision; the system then prepares the candidate email based on that decision.
+- **Candidates** apply through a public portal (`/apply`) and upload a PDF CV.
+- **The Backend** extracts CV text with Docling, parses structured fields via OpenAI, validates output in 3 layers, and computes a deterministic score.
+- **HR Staff** sign in to an internal dashboard (`/hr`) to review profiles, inspect score evidence, draft candidate emails, export Excel reports, and make the final Approve/Reject decision.
 
-> **Core principle: AI assists the recruitment process. It never controls it.**
+> **Core principle:** AI assists with extraction and advisory summaries. Deterministic rules compute all scores, and **only HR** makes consequential decisions.
 
 ---
 
-## The core of the application
+## System Architecture & Access Boundaries
 
-This section explains what the platform actually does and why it exists, in plain language. The authoritative engineering detail lives in [`docs/architecture.md`](docs/architecture.md); this is the reader-oriented overview.
+Candidates can only access the public portal (`/` and `/apply`). All internal HR pages (`/hr`, `/hr/jobs`, `/hr/review/:id`) are guarded by Supabase Auth on the frontend (`ProtectedRoute`) and verified via JWT Bearer tokens on the FastAPI backend.
 
-### The problem it solves
+```mermaid
+flowchart TB
+    classDef public fill:#f8fafc,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+    classDef hr fill:#18181b,stroke:#09090b,stroke-width:1.5px,color:#fafafa
+    classDef auth fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+    classDef api fill:#f1f5f9,stroke:#334155,stroke-width:1.5px,color:#0f172a
+    classDef data fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#064e3b
+    classDef ai fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b
 
-A job opening can attract hundreds of applications. For each one, an HR employee traditionally has to open the CV, read it, find skills and experience, compare them against the job requirements, copy the details into a spreadsheet, calculate a score, decide who moves forward, and write an email. None of those steps is difficult on its own — but repeated 300 times they consume most of the recruiter's day and produce inconsistent results, because every person interprets a CV slightly differently.
+    subgraph PublicZone["Public Pages (No Login Required)"]
+        CAND(["Candidate"])
+        HOME["/ Overview"]:::public
+        APPLY["/apply Application Form + PDF Upload"]:::public
+        CAND --> HOME
+        CAND --> APPLY
+    end
 
-The real problem is therefore **not** "HR has too many CVs". It is:
+    subgraph AuthGate["Access Control Boundary"]
+        LOGIN["/login HR Sign-In (Supabase Auth)"]:::auth
+        GUARD{"Valid HR JWT?"}:::auth
+        BLOCKED["Redirect to /login (Candidates Blocked)"]:::auth
+        CAND -. "Blocked from /hr/*" .-> GUARD
+        LOGIN --> GUARD
+        GUARD -- "No" --> BLOCKED
+    end
 
-> HR spends valuable time on repetitive information-processing instead of on the human judgment that recruitment actually needs.
+    subgraph HRZone["Internal HR Dashboard (Protected)"]
+        HR(["HR Recruiter"])
+        DASH["/hr Screening Dashboard"]:::hr
+        JOBS["/hr/jobs Job Requisitions & Weights"]:::hr
+        REV["/hr/review/:id Dossier, AI Advice & Decision"]:::hr
+        CVV["/hr/review/:id/cv PDF Viewer"]:::hr
+        HR --> LOGIN
+        GUARD -- "Yes" --> DASH
+        DASH --> JOBS
+        DASH --> REV
+        REV --> CVV
+    end
 
-This platform automates the information-processing and leaves the judgment with HR. It turns an unstructured PDF into structured, verifiable data, scores it with rules anyone can inspect, and keeps a complete record of what happened — while the approval or rejection is always a human decision.
+    subgraph Backend["FastAPI Backend (:8001)"]
+        PUB_API["Public Endpoints: GET /api/jobs · POST /api/applications"]:::api
+        HR_API["Protected HR Endpoints: /api/hr/* · /api/cv/* · /api/exports/* · /api/jobs"]:::api
+        PIPELINE["Document & AI Pipeline: Docling → OpenAI → 3-Layer Validation → Rules Engine"]:::api
 
-### The central design idea: reading and deciding are separate jobs
+        APPLY -->|"Multipart Form + PDF"| PUB_API
+        PUB_API --> PIPELINE
+        DASH -->|"Bearer JWT"| HR_API
+        JOBS -->|"Bearer JWT"| HR_API
+        REV -->|"Bearer JWT"| HR_API
+        CVV -->|"Bearer JWT"| HR_API
+    end
 
-The most important thing to understand is that the AI is given exactly **one** job: read a CV and turn it into structured data. It cannot move an application forward, cannot calculate the official score, and cannot contact a candidate.
+    subgraph Services["Supabase & OpenAI"]
+        DB[("Supabase PostgreSQL: Profiles, Scores, Audit Log")]:::data
+        BUCKET[("Supabase Private Storage: candidate-cvs PDFs")]:::data
+        OPENAI["OpenAI API (/v1/responses)"]:::ai
 
-| Concern | Who owns it |
+        PIPELINE -->|"Store PDF"| BUCKET
+        PIPELINE <-->|"Structured Extraction & Advice"| OPENAI
+        PIPELINE -->|"Save Profile, Score & Audit"| DB
+        HR_API <-->|"Query, Decide, Draft Email, Export .xlsx"| DB
+        HR_API -->|"Stream PDF"| BUCKET
+        HR_API <-->|"Draft Email"| OPENAI
+    end
+```
+
+### Page Access Summary
+
+| Route | Audience | Auth Required | Purpose |
+|---|---|---|---|
+| `/` and `/apply` | Public (Candidates) | No | View overview, browse open roles, submit application & PDF CV |
+| `/login` | HR Staff | No | Sign in with Supabase email/password |
+| `/hr`, `/hr/jobs`, `/hr/review/:id`, `/hr/review/:id/cv` | HR Staff Only | Yes (JWT) | Screen candidates, manage jobs/weights, approve/reject, export Excel |
+
+---
+
+## Tech Stack
+
+| Layer | Technologies |
 |---|---|
-| Turning unstructured CV text into structured fields (skills, experience, education) | AI (OpenAI), behind a provider adapter |
-| Deciding whether that extracted data is trustworthy | Deterministic validation code |
-| Scoring the candidate against the job's requirements | Deterministic rules engine — zero AI |
-| Explaining the score | Score breakdown + evidence, stored with the result |
-| Approving or rejecting the candidate | HR only — a hard, terminal decision gate |
-| Preparing the candidate email | System, derived from the HR decision, for HR to review and send |
-| State transitions, permissions, persistence, audit history | Application code |
-
-That boundary is the whole point. AI is used because CVs are unstructured — a sentence like *"five years building backend services"* is easy for a person and hard for a traditional database. But once the text has been converted into numbers and fields, everything consequential is handled by ordinary, inspectable code.
-
-### The life of one application, end to end
-
-1. **Apply** — a candidate fills in a public form (name, email, job) and uploads a PDF CV. The form is intentionally the starting point: it is the candidate's own claim about who they are.
-2. **Validate and store** — the API checks the fields and the file (PDF type, size, magic bytes), uploads the PDF to a **private** Supabase Storage bucket, and saves only the path and metadata in the database — never the binary.
-3. **Snapshot the form** — exactly what the candidate typed is stored immutably in its own table. This becomes the "ground truth" used later to detect extraction errors.
-4. **Read the CV** — the document service converts the PDF into plain text.
-5. **Extract with AI** — a narrow prompt with a strict JSON schema asks the AI only for structured fields: skills, roles, dates, education, certifications, languages.
-6. **Validate the extraction (3 layers)** — the output is checked before anything is trusted:
-   - **Schema** — Pydantic rejects malformed or wrongly typed output (one retry is allowed).
-   - **Business sanity** — implausible values (e.g. 90 years of experience) are rejected, not silently adjusted.
-   - **Deterministic merge + alignment** — missing fields are filled by local parsing, every field gets a provenance tag (`ai` / `deterministic` / `manual`), and extracted identity fields are compared against the form. A mismatch is **flagged for HR, never auto-corrected**.
-7. **Score deterministically** — the rules engine compares the validated profile with the job's requirements (skills, experience, education, certifications), using the job's own score weights. It produces a total score, a per-category breakdown, and the evidence behind each number. A candidate is "qualified" when the score clears a transparent threshold (60% of the maximum possible score). The same input always produces the same score.
-8. **Add an advisory assessment** — a separate AI advisor reviews the full job description and explains, per requirement, whether it is verified, missing, or unverifiable. It also writes a one-sentence "why this verdict" summary and a recommendation for HR. This is **advice only** — it informs HR but never changes the official score or outcome.
-9. **Review** — HR opens a dossier containing the extracted profile (with provenance badges and mismatch warnings), the score card with breakdown and evidence, the AI summary, the original CV PDF, and the full audit history.
-10. **Decide** — HR clicks Approve or Reject. This is a hard state-machine gate: a decision is terminal, irreversible, and can only be made once. No automation can reach this state on its own.
-11. **Notify and record** — the decision determines which candidate email draft is prepared, and every step (submitted, extracted, screened, decided, emailed) is appended to an audit log with who, what, when, and a payload snapshot.
-
-At any point HR can export the current view — with filters applied — to Excel, and open the original uploaded CV in its own viewer page.
-
-### Why the results can be trusted
-
-Four details make this more than a "CV + prompt" demo:
-
-- **Two independent sources of truth.** The form and the PDF are stored separately so the system can compare them. If the AI reads a different email address than the candidate typed, HR sees a mismatch warning instead of a silently wrong profile.
-- **Provenance on every field.** HR can see whether a value came from the AI, from deterministic parsing, or from manual entry. Trust is visible, not assumed.
-- **Explainable, reproducible scores.** There is no single opaque number. Every score comes with a threshold, a category breakdown, and matched/missing evidence. The engine contains no AI, so it is deterministic and auditable.
-- **A terminal human gate and an audit trail.** The workflow forbids skipping review, going backwards, or deciding twice. Every transition is logged, so the question "who approved this, and when?" always has an answer.
-
-### What the system deliberately does NOT do
-
-Automation is bounded on purpose. The platform does **not** automatically hire or reject anyone, schedule interviews, manage calendars, send messages outside the defined email flow, or replace HR judgment. These are excluded to keep the system simple and to keep consequential decisions with people.
-
-### Where to go deeper
-
-- [`docs/client-brief.md`](docs/client-brief.md) — the 10 business gaps, before/after workflow, and expected value.
-- [`docs/architecture.md`](docs/architecture.md) — component diagram, state machine, validation pipeline, and data model.
-- [`docs/build-along.md`](docs/build-along.md) — each implemented slice with commands, observable results, and checkpoints.
+| **Frontend** | React 19, TypeScript (strict), Vite, Tailwind CSS v4, shadcn/ui (`Geist Variable`), React Router, `pnpm` |
+| **Backend** | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, `uv` |
+| **Database & Storage** | Supabase PostgreSQL (source of truth) + Supabase Private Storage (`candidate-cvs` bucket) |
+| **Auth** | Supabase Auth (Email/Password JWT verified on backend via `get_user`) |
+| **AI & PDF** | Docling (PDF → Markdown), OpenAI SDK via `instructor` (`RESPONSES_TOOLS` mode) |
+| **Reporting** | `openpyxl` (`.xlsx` streaming export) |
 
 ---
 
-## Documentation
+## Step-by-Step Setup
 
-| Document | Purpose |
-|---|---|
-| [`docs/client-brief.md`](docs/client-brief.md) | The *why* — business problems, the ten gaps, and expected value (Main Source of Truth for business) |
-| [`docs/architecture.md`](docs/architecture.md) | The *how* — diagrams, state machine, module responsibilities, locked technical decisions |
-| [`docs/todos.md`](docs/todos.md) | Build plan, phase-by-phase, plus the decision log |
-| [`docs/guides/`](docs/guides/) | Setup walkthroughs: backend, frontend, Supabase, Excel export |
-| [`AGENTS.md`](AGENTS.md), [`backend/AGENTS.md`](backend/AGENTS.md), [`frontend/AGENTS.md`](frontend/AGENTS.md) | Rules for AI coding agents: boundaries, dependency policy, verification |
+### Prerequisites
 
-One fact lives in one place. If a section belongs in `docs/`, this file links to it instead of duplicating it.
+- **Python 3.12+** and [`uv`](https://docs.astral.sh/uv/)
+- **Node.js 20+** and [`pnpm`](https://pnpm.io/)
+- A **Supabase** project (URL, Anon Key, Service Role Key, Direct Postgres URL)
+- An **OpenAI API key**
 
----
+### 1. Configure Environment Variables
 
-## Stack
+Create `backend/.env` from `backend/.env.example`:
 
-- **Backend:** Python 3.12+, FastAPI, Pydantic v2 + pydantic-settings, SQLAlchemy 2, Alembic, uv
-- **Database & storage:** Supabase PostgreSQL + Supabase Storage (private CV bucket; DB holds references, never binaries)
-- **AI:** OpenAI SDK behind adapter boundaries (CV extraction only — deterministic rules do all scoring)
-- **Auth:** Supabase email auth for the HR dashboard (public application form is unauthenticated)
-- **Frontend:** Vite + React + TypeScript (strict) + Tailwind CSS + shadcn/ui + React Router, pnpm
-- **Export:** openpyxl (`.xlsx` streaming export)
-- **Docs:** see links above
+```bash
+cp backend/.env.example backend/.env
+```
 
-See [`docs/architecture.md`](docs/architecture.md#11-locked-technical-decisions) for the locked decisions and rationale.
+Fill in your credentials in `backend/.env`:
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `DATABASE_URL` (use the `postgresql+psycopg://` scheme with your Supabase direct connection string)
+- `OPENAI_API_KEY` and `OPENAI_CHAT_MODEL` (e.g. `gpt-6-luna`)
+- `ALLOWED_ORIGINS=http://localhost:5174`
 
----
+Create `frontend/.env` from `frontend/.env.example`:
 
-## Quick start
+```bash
+cp frontend/.env.example frontend/.env
+```
 
-Backend:
+Fill in `frontend/.env`:
+- `VITE_API_BASE_URL=http://localhost:8001`
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+
+### 2. Set Up & Run the Backend
 
 ```bash
 cd backend
 uv sync --locked
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload --port 8001
+uv run --locked --no-sync alembic upgrade head
+uv run --locked --no-sync python scripts/setup_storage.py
+uv run --locked --no-sync uvicorn app.main:app --reload --port 8001
 ```
 
-Frontend:
+Verify the backend is running at `http://localhost:8001/health`.
+
+### 3. Set Up & Run the Frontend
+
+In a new terminal:
 
 ```bash
 cd frontend
@@ -125,4 +158,33 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Setup guides live in [`docs/guides/`](docs/guides/). The MVP build order and verification policy are in [`docs/todos.md`](docs/todos.md) and [`AGENTS.md`](AGENTS.md).
+Open `http://localhost:5174` in your browser.
+
+### 4. Create an HR User
+
+1. Open your **Supabase Dashboard → Authentication → Users → Add user**.
+2. Create an email/password account for HR.
+3. Visit `http://localhost:5174/login` and sign in to access `/hr` and `/hr/jobs`.
+
+---
+
+## Verification
+
+```bash
+# Backend lint
+cd backend && uv run --locked --no-sync ruff check app
+
+# Frontend lint, typecheck & production build
+cd frontend && pnpm lint && pnpm build
+```
+
+---
+
+## Further Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/client-brief.md`](docs/client-brief.md) | Business problem, 10 gaps, and expected value |
+| [`docs/architecture.md`](docs/architecture.md) | State machine, validation pipeline, and locked technical decisions |
+| [`docs/build-along.md`](docs/build-along.md) | Step-by-step slice log with commands and checkpoints |
+| [`docs/todos.md`](docs/todos.md) | Build plan and decision log |

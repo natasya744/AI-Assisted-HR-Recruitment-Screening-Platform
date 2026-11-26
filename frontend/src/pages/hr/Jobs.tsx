@@ -57,10 +57,22 @@ export default function JobsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
 
   useEffect(() => {
     loadJobs();
   }, []);
+
+  async function handleCopyLink(jobId: string) {
+    const url = new URL(`/apply/${jobId}`, window.location.origin).toString();
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedJobId(jobId);
+      window.setTimeout(() => setCopiedJobId(null), 2000);
+    } catch {
+      setError("Could not copy the link. Use the Public Apply Link instead.");
+    }
+  }
 
   async function loadJobs() {
     try {
@@ -327,14 +339,24 @@ export default function JobsPage() {
                   </CardContent>
                 </div>
 
-                <CardFooter className="pt-4 border-t border-neutral-100 justify-between text-xs text-neutral-400">
+                <CardFooter className="pt-4 border-t border-neutral-100 justify-between text-xs text-neutral-400 gap-3">
                   <span className="font-mono text-[11px]">ID: {job.id.slice(0, 8)}…</span>
-                  <Link
-                    to="/apply"
-                    className="font-medium text-neutral-700 hover:text-neutral-950 transition-colors"
-                  >
-                    Public Apply Link →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyLink(job.id)}
+                      className="font-medium text-neutral-500 hover:text-neutral-950 transition-colors"
+                      title="Copy the public apply link for this job"
+                    >
+                      {copiedJobId === job.id ? "Copied!" : "Copy Apply Link"}
+                    </button>
+                    <Link
+                      to={`/apply/${job.id}`}
+                      className="font-medium text-neutral-700 hover:text-neutral-950 transition-colors"
+                    >
+                      Public Apply Link →
+                    </Link>
+                  </div>
                 </CardFooter>
               </Card>
             );
