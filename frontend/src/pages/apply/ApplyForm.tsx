@@ -488,7 +488,7 @@ export default function ApplyForm() {
               {submitting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span>Processing CV with AI…</span>
+                  <span>Waiting for processing…</span>
                 </>
               ) : (
                 <>

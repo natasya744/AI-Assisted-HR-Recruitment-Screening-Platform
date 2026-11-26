@@ -16,14 +16,14 @@ export class ApiError extends Error {
 
 const DEFAULT_TIMEOUT = 120_000;
 
-async function doFetch(
+async function executeFetch(
   method: string,
   url: string,
-  body?: unknown,
+  body: unknown,
+  token: string | undefined,
+  signal: AbortSignal,
   init?: RequestInit & { timeout?: number },
 ): Promise<Response> {
-  const timeout = init?.timeout ?? DEFAULT_TIMEOUT;
-
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -32,28 +32,55 @@ async function doFetch(
     headers["Content-Type"] = "application/json";
   }
 
-  const session = await supabase.auth.getSession();
-  const token = session.data.session?.access_token;
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+
+  return fetch(url, {
+    method,
+    headers,
+    body:
+      body instanceof FormData
+        ? body
+        : body !== undefined
+          ? JSON.stringify(body)
+          : undefined,
+    signal,
+    ...init,
+  });
+}
+
+async function doFetch(
+  method: string,
+  url: string,
+  body?: unknown,
+  init?: RequestInit & { timeout?: number },
+): Promise<Response> {
+  const timeout = init?.timeout ?? DEFAULT_TIMEOUT;
+
+  const session = await supabase.auth.getSession();
+  const token = session.data.session?.access_token;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
-      method,
-      headers,
-      body:
-        body instanceof FormData
-          ? body
-          : body !== undefined
-            ? JSON.stringify(body)
-            : undefined,
-      signal: controller.signal,
-      ...init,
-    });
+    let response = await executeFetch(method, url, body, token, controller.signal, init);
+
+    // If token was rejected (e.g. expired or revoked session), try refreshing once
+    if (response.status === 401 && token) {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      const newToken = refreshed.session?.access_token;
+
+      if (!refreshError && newToken) {
+        response = await executeFetch(method, url, body, newToken, controller.signal, init);
+      }
+
+      if (response.status === 401) {
+        // Session no longer exists on Supabase; clear local auth state so UI redirects to /login
+        await supabase.auth.signOut({ scope: "local" });
+      }
+    }
 
     if (!response.ok) {
       let errorData: unknown;

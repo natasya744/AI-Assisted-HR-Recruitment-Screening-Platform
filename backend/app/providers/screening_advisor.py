@@ -10,6 +10,7 @@ from app.core.config import settings
 _client = instructor.from_provider(
     f"openai/{settings.OPENAI_CHAT_MODEL}",
     api_key=settings.OPENAI_API_KEY,
+    mode=instructor.Mode.RESPONSES_TOOLS,
 )
 
 
