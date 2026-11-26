@@ -11,22 +11,25 @@ import {
   FileSpreadsheet,
   CheckCircle2,
 } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
-    <div className="space-y-12 py-4">
+    <div className="space-y-12 py-2">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/70 via-white to-white p-8 sm:p-12 text-center shadow-xs">
-        <div className="mx-auto max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-700 shadow-2xs">
-            <Sparkles className="size-3.5 text-indigo-500" />
-            Next-Gen AI Screening & Candidate Assessment
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl" style={{ color: '#1e1b4b' }}>
-            Streamlined Recruitment with{" "}
-            <span className="bg-gradient-to-r from-indigo-600 to-sky-600 bg-clip-text text-transparent">Explainable AI</span>
+      <section className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white px-6 py-12 sm:px-12 sm:py-16 text-center shadow-2xs">
+        <div className="mx-auto max-w-3xl space-y-5">
+          <Badge variant="secondary" className="px-3 py-1 text-xs font-medium text-neutral-700">
+            <Sparkles className="size-3.5 text-neutral-700" />
+            AI Screening & Candidate Assessment
+          </Badge>
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl lg:text-5xl text-balance">
+            Streamlined Recruitment with Explainable AI
           </h1>
-          <p className="mx-auto max-w-2xl text-sm sm:text-base leading-relaxed text-slate-600">
+          <p className="mx-auto max-w-2xl text-sm sm:text-base leading-relaxed text-neutral-500 text-pretty">
             End-to-end CV processing, transparent scoring criteria, deterministic rule matching,
             and human-in-the-loop decision workflows.
           </p>
@@ -34,7 +37,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               to="/apply"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-700 hover:shadow-lg transition-all"
+              className={cn(buttonVariants({ variant: "default", size: "lg" }), "px-6")}
             >
               <UserPlus className="size-4" />
               Apply for a Position
@@ -42,192 +45,200 @@ export default function Home() {
             </Link>
             <Link
               to="/hr"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-indigo-600 transition-all"
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "px-6")}
             >
-              <LayoutDashboard className="size-4 text-slate-500" />
+              <LayoutDashboard className="size-4 text-neutral-600" />
               Open HR Dashboard
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Portals Grid (Consistent frame and equal sizing) */}
-      <div>
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between">
+      {/* Main Portals Grid */}
+      <section className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
           <div>
-            <h2 className="text-xl font-bold tracking-tight" style={{ color: '#312e81' }}>Platform Portals</h2>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <h2 className="text-xl font-semibold tracking-tight text-neutral-950">
+              Platform Portals
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-500 mt-1">
               Access the candidate application portal, HR screening dashboard, and job management
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Portal 1: Apply */}
-          <div className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all">
+          <Card className="justify-between transition-colors hover:border-neutral-300">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 group-hover:scale-105 transition-transform">
-                  <UserPlus className="size-6" />
+              <CardHeader>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex size-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900">
+                    <UserPlus className="size-5" />
+                  </div>
+                  <Badge variant="outline">Candidate Portal</Badge>
                 </div>
-                <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-700">
-                  Candidate Portal
-                </span>
-              </div>
-              <h3 className="text-lg font-bold" style={{ color: '#1e293b' }}>Apply for Positions</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Public candidate application flow. Upload PDF resumes with automated size verification and multi-field validation.
-              </p>
-              <ul className="space-y-1.5 pt-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  PDF CV Upload & Supabase Storage
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  Real-time application reference ID
-                </li>
-              </ul>
+                <CardTitle>Apply for Positions</CardTitle>
+                <CardDescription className="leading-relaxed">
+                  Public candidate application flow. Upload PDF resumes with automated size verification and multi-field validation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-xs text-neutral-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    PDF CV Upload & Supabase Storage
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    Real-time application reference ID
+                  </li>
+                </ul>
+              </CardContent>
             </div>
-            <div className="pt-6">
+            <CardFooter className="pt-2">
               <Link
                 to="/apply"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-600 transition-colors"
+                className={cn(buttonVariants({ variant: "outline", size: "default" }), "w-full justify-between")}
               >
-                Submit Application
+                <span>Submit Application</span>
                 <ArrowRight className="size-3.5" />
               </Link>
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
 
           {/* Portal 2: HR Dashboard */}
-          <div className="group flex flex-col justify-between rounded-2xl border border-indigo-200/80 bg-white p-6 shadow-xs hover:border-indigo-400 hover:shadow-md transition-all relative overflow-hidden">
-            <div className="absolute top-0 right-0 h-1.5 w-full bg-gradient-to-r from-indigo-500 to-sky-500" />
+          <Card className="justify-between border-neutral-900/20 bg-white transition-colors hover:border-neutral-900/40">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-105 transition-transform">
-                  <LayoutDashboard className="size-6" />
+              <CardHeader>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-neutral-950 text-white">
+                    <LayoutDashboard className="size-5" />
+                  </div>
+                  <Badge variant="default">Recruiter Console</Badge>
                 </div>
-                <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
-                  Recruiter Console
-                </span>
-              </div>
-              <h3 className="text-lg font-bold" style={{ color: '#1e293b' }}>HR Screening Dashboard</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Review incoming applications, inspect AI qualification scores, filter candidate pipelines, and export to Excel.
-              </p>
-              <ul className="space-y-1.5 pt-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  Multi-parameter search & filters
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  Excel export with complete screening audit
-                </li>
-              </ul>
+                <CardTitle>HR Screening Dashboard</CardTitle>
+                <CardDescription className="leading-relaxed">
+                  Review incoming applications, inspect AI qualification scores, filter candidate pipelines, and export to Excel.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-xs text-neutral-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    Multi-parameter search & filters
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    Excel export with complete screening audit
+                  </li>
+                </ul>
+              </CardContent>
             </div>
-            <div className="pt-6">
+            <CardFooter className="pt-2">
               <Link
                 to="/hr"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-colors"
+                className={cn(buttonVariants({ variant: "default", size: "default" }), "w-full justify-between")}
               >
-                Open Dashboard
+                <span>Open Dashboard</span>
                 <ArrowRight className="size-3.5" />
               </Link>
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
 
           {/* Portal 3: Job Management */}
-          <div className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all">
+          <Card className="justify-between transition-colors hover:border-neutral-300">
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600 group-hover:scale-105 transition-transform">
-                  <Briefcase className="size-6" />
+              <CardHeader>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex size-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-900">
+                    <Briefcase className="size-5" />
+                  </div>
+                  <Badge variant="outline">Requisitions</Badge>
                 </div>
-                <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700">
-                  Requisitions
-                </span>
-              </div>
-              <h3 className="text-lg font-bold" style={{ color: '#1e293b' }}>Create & Manage Jobs</h3>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Define job openings, customize required skills, education thresholds, and configure weighted scoring rules for the AI.
-              </p>
-              <ul className="space-y-1.5 pt-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  Custom score weight allocation
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                  Full job description ingestion for AI matching
-                </li>
-              </ul>
+                <CardTitle>Create & Manage Jobs</CardTitle>
+                <CardDescription className="leading-relaxed">
+                  Define job openings, customize required skills, education thresholds, and configure weighted scoring rules for the AI.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-xs text-neutral-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    Custom score weight allocation
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5 text-neutral-900 shrink-0" />
+                    Full job description ingestion for AI matching
+                  </li>
+                </ul>
+              </CardContent>
             </div>
-            <div className="pt-6">
+            <CardFooter className="pt-2">
               <Link
                 to="/hr/jobs"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-600 transition-colors"
+                className={cn(buttonVariants({ variant: "outline", size: "default" }), "w-full justify-between")}
               >
-                Manage Job Postings
+                <span>Manage Job Postings</span>
                 <ArrowRight className="size-3.5" />
               </Link>
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
         </div>
-      </div>
+      </section>
 
       {/* Architecture & AI Transparency Highlights */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
-        <div className="mb-6">
-          <h2 className="text-lg font-bold" style={{ color: '#312e81' }}>How the Screening Engine Works</h2>
-          <p className="text-xs sm:text-sm text-slate-500">
+      <Card>
+        <CardHeader>
+          <CardTitle>How the Screening Engine Works</CardTitle>
+          <CardDescription>
             A reliable blend of AI extraction, deterministic business rules, and human oversight.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="space-y-2 rounded-xl bg-slate-50 p-4 border border-slate-100">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
-              <FileCheck2 className="size-4" />
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2.5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+              <div className="flex size-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-900">
+                <FileCheck2 className="size-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-neutral-950">1. Document Intelligence</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Extracts text, structured fields, skills, and work history from candidate CVs with field-level provenance.
+              </p>
             </div>
-            <h4 className="text-sm font-semibold" style={{ color: '#1e293b' }}>1. Document Intelligence</h4>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Extracts text, structured fields, skills, and work history from candidate CVs with field-level provenance.
-            </p>
-          </div>
 
-          <div className="space-y-2 rounded-xl bg-slate-50 p-4 border border-slate-100">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
-              <Cpu className="size-4" />
+            <div className="space-y-2.5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+              <div className="flex size-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-900">
+                <Cpu className="size-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-neutral-950">2. Deterministic Scoring</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Calculates experience, skill matching, and education against job requirements with custom weights.
+              </p>
             </div>
-            <h4 className="text-sm font-semibold" style={{ color: '#1e293b' }}>2. Deterministic Scoring</h4>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Calculates experience, skill matching, and education against job requirements with custom weights.
-            </p>
-          </div>
 
-          <div className="space-y-2 rounded-xl bg-slate-50 p-4 border border-slate-100">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-              <ShieldCheck className="size-4" />
+            <div className="space-y-2.5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+              <div className="flex size-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-900">
+                <ShieldCheck className="size-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-neutral-950">3. Alignment Verification</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Flags discrepancies between self-reported form data and extracted PDF content without auto-tampering.
+              </p>
             </div>
-            <h4 className="text-sm font-semibold" style={{ color: '#1e293b' }}>3. Alignment Verification</h4>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Flags discrepancies between self-reported form data and extracted PDF content without auto-tampering.
-            </p>
-          </div>
 
-          <div className="space-y-2 rounded-xl bg-slate-50 p-4 border border-slate-100">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-              <FileSpreadsheet className="size-4" />
+            <div className="space-y-2.5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+              <div className="flex size-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-900">
+                <FileSpreadsheet className="size-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-neutral-950">4. Human Decision</h3>
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                HR recruiters make final decisions with full audit logs, one-click CV review, and Excel reporting.
+              </p>
             </div>
-            <h4 className="text-sm font-semibold" style={{ color: '#1e293b' }}>4. Human Decision</h4>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              HR recruiters make final decisions with full audit logs, one-click CV review, and Excel reporting.
-            </p>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

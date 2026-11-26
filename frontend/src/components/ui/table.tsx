@@ -9,7 +9,7 @@ function Table({
     <div data-slot="table-container" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom text-sm border-collapse", className)}
         {...props}
       />
     </div>
@@ -23,7 +23,7 @@ function TableHeader({
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-neutral-50/80 [&_tr]:border-b [&_tr]:border-border", className)}
       {...props}
     />
   )
@@ -36,7 +36,7 @@ function TableBody({
   return (
     <tbody
       data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
+      className={cn("divide-y divide-border/70 [&_tr:last-child]:border-0", className)}
       {...props}
     />
   )
@@ -63,7 +63,7 @@ function TableRow({
     <tr
       data-slot="table-row"
       className={cn(
-        "border-b border-border transition-colors hover:bg-muted/40 data-[state=selected]:bg-muted",
+        "border-b border-border/70 transition-colors hover:bg-neutral-50/90 data-[state=selected]:bg-muted",
         className
       )}
       {...props}
@@ -79,7 +79,7 @@ function TableHead({
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-muted-foreground",
+        "h-11 px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap text-neutral-500 first:pl-6 last:pr-6",
         className
       )}
       {...props}
@@ -94,7 +94,7 @@ function TableCell({
   return (
     <td
       data-slot="table-cell"
-      className={cn("px-3 py-3 align-middle", className)}
+      className={cn("px-4 py-3.5 align-middle text-sm text-neutral-700 first:pl-6 last:pr-6", className)}
       {...props}
     />
   )

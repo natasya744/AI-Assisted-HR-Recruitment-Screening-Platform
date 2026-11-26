@@ -2,6 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FileCheck2, Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -28,93 +33,86 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center py-12">
+    <div className="flex min-h-[calc(100vh-14rem)] items-center justify-center py-8">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 text-white shadow-lg shadow-indigo-500/20">
-            <FileCheck2 className="size-6" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Sign in to TalentAI Recruit
-          </h1>
-          <p className="text-sm text-slate-500">
-            HR staff sign-in to access the screening dashboard
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="email"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-600"
-            >
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="hr@example.com"
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-              />
+        <Card className="p-2">
+          <CardHeader className="text-center items-center space-y-2 pb-2">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-neutral-950 text-white shadow-xs">
+              <FileCheck2 className="size-5" />
             </div>
-          </div>
+            <CardTitle className="text-xl">Sign in to TalentAI Recruit</CardTitle>
+            <CardDescription>
+              HR staff sign-in to access the screening dashboard
+            </CardDescription>
+          </CardHeader>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="password"
-              className="text-xs font-semibold uppercase tracking-wider text-slate-600"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-          </div>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
+                  Email
+                </Label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="hr@example.com"
+                    className="h-10 pl-9"
+                  />
+                </div>
+              </div>
 
-          {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-              {error}
-            </div>
-          )}
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="h-10 pl-9 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50 transition-all"
-          >
-            {loading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Mail className="size-4" />
-            )}
-            <span>{loading ? "Signing in…" : "Sign in"}</span>
-          </button>
-        </form>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-        <p className="text-center text-xs text-slate-400">
-          <Link to="/" className="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">
-            Back to home
+              <Button type="submit" disabled={loading} className="w-full h-10">
+                {loading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Mail className="size-4" />
+                )}
+                <span>{loading ? "Signing in…" : "Sign in"}</span>
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-xs text-neutral-500">
+          <Link to="/" className="font-medium text-neutral-700 hover:text-neutral-950 transition-colors">
+            ← Back to home
           </Link>
         </p>
       </div>

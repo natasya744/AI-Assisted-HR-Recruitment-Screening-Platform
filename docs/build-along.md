@@ -716,3 +716,53 @@ This guide documents every completed slice, explaining what was built, why, exac
   - Education matches correctly with degree equivalencies (Bachelor, Master, Diploma).
 
 - **Checkpoint**: Deterministic screening engine is modular and domain-agnostic, while AI prompt engineering handles semantic normalization and alignment faithfully.
+
+---
+
+## Phase 11 — Supabase Project Migration (Expired → New Project)
+
+### Slice 11.1: Point the app at a new Supabase project and recreate the schema
+
+- **Outcome**: Migrated the platform from the expired Supabase project to a new one and recreated all database objects there.
+  - `backend/.env` and `frontend/.env` were updated with the new project's URL, anon key, service-role key, and database connection string.
+  - [`backend/.env`](../backend/.env): corrected the `DATABASE_URL` scheme from `postgresql://` to `postgresql+psycopg://` — the bare scheme makes SQLAlchemy fall back to `psycopg2`, which is not installed (`ModuleNotFoundError: No module named 'psycopg2'`). The project uses `psycopg[binary]`.
+  - Recreated the full schema in the new project by running all Alembic migrations (`0001` → `0002` → `0003`): `jobs`, `candidates`, `applications`, `candidate_profiles_form`, `candidate_profiles_pdf`, `screening_results`, `hr_decisions`, `audit_logs`, plus `alembic_version`.
+  - Recreated the private `candidate-cvs` Storage bucket via the setup script.
+- **Why**: The original Supabase project expired and could no longer be reached (`ENOTFOUND tenant/user ... not found`), so the app could not connect to its database or storage. Alembic is the single source of schema truth; applying the committed migrations in the new project recreates the exact same structure without manual dashboard edits.
+- **Exact Commands**:
+  ```bash
+  cd backend
+  uv run --locked --no-sync alembic upgrade head
+  uv run --locked --no-sync alembic current
+  uv run --locked --no-sync python scripts/setup_storage.py
+  uv run --locked --no-sync ruff check app scripts alembic
+  cd frontend
+  pnpm tsc --noEmit && pnpm lint && pnpm build
+  ```
+- **Observable Result**:
+  - `alembic upgrade head` applied `0001`, `0002`, `0003` successfully against the new project; `alembic current` reports `0003 (head)`.
+  - `pg_tables` in `public` lists all 8 domain tables plus `alembic_version`.
+  - `Storage bucket 'candidate-cvs' ready.` / `Bucket visibility: private`.
+  - `ruff` passes; `tsc`, `lint`, and production `build` are green (lint reports only pre-existing warnings).
+- **Note**: Because the expired project is unreachable, existing data cannot be carried over — the new project starts with an empty schema. HR auth users must be re-created in the new Supabase project. Keep service-role keys and the database password out of git; only `.env.example` is tracked.
+- **Checkpoint**: The app now targets a healthy Supabase project with the complete schema and private CV bucket in place; backend and frontend verification gates are green.
+
+---
+
+### Slice 11.2: Monochrome UI Redesign with Reusable Shadcn Components
+
+- **Outcome**: Redesigned the frontend into a clean black, white, and neutral grey aesthetic using Geist Variable typography and reusable shadcn UI primitives while preserving every existing data field and workflow:
+  - [`frontend/src/index.css`](../frontend/src/index.css): Removed leftover Vite starter CSS (`system-ui`, purple accents, conflicting `prefers-color-scheme: dark` variables) so `Geist Variable` and neutral monochrome tokens drive all typography and surfaces cleanly.
+  - Added reusable shadcn-style UI primitives under `frontend/src/components/ui/`: [`dialog.tsx`](../frontend/src/components/ui/dialog.tsx), [`select.tsx`](../frontend/src/components/ui/select.tsx), [`tabs.tsx`](../frontend/src/components/ui/tabs.tsx), [`alert.tsx`](../frontend/src/components/ui/alert.tsx), [`separator.tsx`](../frontend/src/components/ui/separator.tsx), and standardized [`button.tsx`](../frontend/src/components/ui/button.tsx), [`badge.tsx`](../frontend/src/components/ui/badge.tsx), [`card.tsx`](../frontend/src/components/ui/card.tsx), [`input.tsx`](../frontend/src/components/ui/input.tsx), [`textarea.tsx`](../frontend/src/components/ui/textarea.tsx), [`label.tsx`](../frontend/src/components/ui/label.tsx), [`progress.tsx`](../frontend/src/components/ui/progress.tsx), and [`table.tsx`](../frontend/src/components/ui/table.tsx).
+  - Updated [`frontend/src/pages/hr/Dashboard.tsx`](../frontend/src/pages/hr/Dashboard.tsx) to fix the mismatched table header/cell column count (7 headers matching 7 cells) and apply consistent `px-4 py-3.5` table cell spacing with `tabular-nums` alignment.
+  - Updated [`frontend/src/components/Layout.tsx`](../frontend/src/components/Layout.tsx), [`Home.tsx`](../frontend/src/pages/Home.tsx), [`Login.tsx`](../frontend/src/pages/auth/Login.tsx), [`ApplyForm.tsx`](../frontend/src/pages/apply/ApplyForm.tsx), [`Jobs.tsx`](../frontend/src/pages/hr/Jobs.tsx), [`Review.tsx`](../frontend/src/pages/hr/Review.tsx), [`CvViewer.tsx`](../frontend/src/pages/hr/CvViewer.tsx), and all shared cards/dialogs/badges to use the monochrome palette and reusable UI primitives.
+- **Why**: Replaces generic indigo/violet AI-template styling with a cohesive, modern monochrome design system, ensures consistent table spacing, and enforces modern typography via `Geist Variable`.
+- **Exact Commands**:
+  ```bash
+  cd frontend
+  pnpm lint && pnpm build
+  ```
+- **Observable Result**:
+  - `oxlint` passes with 0 errors (6 pre-existing warnings).
+  - `tsc -b && vite build` compiles cleanly and bundles `Geist Variable` woff2 assets into `dist/assets/`.
+- **Checkpoint**: Frontend is redesigned in clean black/white/grey with reusable shadcn components, consistent table spacing, and `Geist Variable` typography, with all existing fields preserved.

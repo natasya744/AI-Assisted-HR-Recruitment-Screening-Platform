@@ -33,10 +33,40 @@ RESUME_EXTRACTION_SYSTEM_PROMPT = (
     "6. Do not include any explanations, greetings, or markdown fences outside the JSON response.\n"
 )
 
+
 RESUME_EXTRACTION_USER_PROMPT = (
-    "Extract structured candidate information from the following CV text:\n\n"
-    "---\n"
+    "Extract structured candidate information from the following CV text.\n\n"
+
+    "IMPORTANT EXTRACTION RULES:\n"
+    "1. Extract information faithfully from the CV. "
+    "Do not invent, assume, or silently correct information.\n"
+
+    "2. Preserve the original meaning and spelling of names, "
+    "phone numbers, email addresses, and URLs.\n"
+
+    "3. For phone numbers, preserve the extracted value. "
+    "Different spacing, hyphens, parentheses, or formatting "
+    "must not be interpreted as different phone numbers.\n"
+
+    "4. For URLs, preserve the extracted URL. "
+    "Differences such as http vs https, www prefixes, "
+    "and trailing slashes should not be treated as "
+    "different destinations when they resolve to the same URL.\n"
+
+    "5. For names, preserve the complete name exactly as "
+    "written in the CV. Do not remove, add, or modify name parts.\n"
+
+    "6. If information is missing from the CV, return null "
+    "for that field instead of guessing.\n"
+
+    "7. Do not compare CV information against external form data "
+    "unless explicitly provided as a separate input.\n\n"
+
+    "--- CV TEXT ---\n"
     "{cv_text}\n"
-    "---\n\n"
-    "Respond with a JSON object matching the CandidateProfileExtracted schema only."
+    "--- END CV TEXT ---\n\n"
+
+    "Respond with a JSON object matching the "
+    "CandidateProfileExtracted schema only."
 )
+

@@ -1,5 +1,7 @@
 import { useState, type KeyboardEvent, type ClipboardEvent, type ChangeEvent } from "react";
 import { X, Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export interface TagInputProps {
   id?: string;
@@ -65,7 +67,6 @@ export default function TagInput({
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
-    // If the input ends with or contains a comma or semicolon, commit the tag
     if (val.includes(",") || val.includes(";")) {
       addItems(val);
     } else {
@@ -89,22 +90,27 @@ export default function TagInput({
 
   const badgeStyles =
     badgeTone === "indigo"
-      ? "bg-indigo-50 border-indigo-200/80 text-indigo-700 hover:bg-indigo-100/70"
-      : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200/70";
+      ? "bg-neutral-900 border-neutral-900 text-white"
+      : "bg-neutral-100 border-neutral-200 text-neutral-800";
+
+  const removeButtonStyles =
+    badgeTone === "indigo"
+      ? "text-neutral-300 hover:bg-white/15 hover:text-white"
+      : "text-neutral-400 hover:bg-neutral-200 hover:text-neutral-900";
 
   return (
     <div className="space-y-1.5">
       {label && (
         <div className="flex items-center justify-between">
-          <label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          <Label htmlFor={id} className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
             {label} ({items.length})
-          </label>
-          {helperText && <span className="text-[11px] text-slate-400">{helperText}</span>}
+          </Label>
+          {helperText && <span className="text-[11px] text-neutral-400">{helperText}</span>}
         </div>
       )}
 
       <div
-        className="min-h-[46px] w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 flex flex-wrap items-center gap-1.5"
+        className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-white p-1.5 shadow-2xs transition-colors focus-within:border-neutral-950 focus-within:ring-2 focus-within:ring-neutral-950/10 flex flex-wrap items-center gap-1.5"
         onClick={() => {
           if (id) {
             document.getElementById(id)?.focus();
@@ -114,7 +120,10 @@ export default function TagInput({
         {items.map((item, idx) => (
           <span
             key={`${item}-${idx}`}
-            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${badgeStyles}`}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+              badgeStyles
+            )}
           >
             <span>{item}</span>
             <button
@@ -123,7 +132,7 @@ export default function TagInput({
                 e.stopPropagation();
                 removeItem(idx);
               }}
-              className="rounded p-0.5 text-slate-400 hover:bg-black/5 hover:text-slate-700 focus:outline-none"
+              className={cn("rounded p-0.5 focus:outline-none cursor-pointer", removeButtonStyles)}
               title={`Remove ${item}`}
             >
               <X className="size-3" />
@@ -141,21 +150,21 @@ export default function TagInput({
             onPaste={handlePaste}
             onBlur={handleBlur}
             placeholder={items.length === 0 ? placeholder : "Add more..."}
-            className="w-full bg-transparent px-2 py-1 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none"
+            className="w-full bg-transparent px-2 py-1 text-sm text-neutral-950 placeholder:text-neutral-400 focus:outline-none"
           />
           {inputValue.trim() && (
             <button
               type="button"
               onClick={() => addItems(inputValue)}
-              className="mr-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors flex items-center gap-0.5"
+              className="mr-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-800 hover:bg-neutral-200 transition-colors flex items-center gap-0.5 cursor-pointer"
             >
               <Plus className="size-3" /> Add
             </button>
           )}
         </div>
       </div>
-      <p className="text-[11px] text-slate-400">
-        Type and press <kbd className="rounded bg-slate-100 px-1 py-0.5 text-[10px] font-mono text-slate-500">Enter</kbd> or <kbd className="rounded bg-slate-100 px-1 py-0.5 text-[10px] font-mono text-slate-500">,</kbd> (comma) to add. Paste lists to add multiple at once.
+      <p className="text-[11px] text-neutral-400">
+        Type and press <kbd className="rounded border border-neutral-200 bg-neutral-100 px-1 py-0.5 text-[10px] font-mono text-neutral-600">Enter</kbd> or <kbd className="rounded border border-neutral-200 bg-neutral-100 px-1 py-0.5 text-[10px] font-mono text-neutral-600">,</kbd> (comma) to add. Paste lists to add multiple at once.
       </p>
     </div>
   );

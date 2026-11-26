@@ -10,6 +10,8 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function Layout() {
   const location = useLocation();
@@ -19,9 +21,9 @@ export default function Layout() {
     { label: "Overview", href: "/", icon: Sparkles, exact: true },
     ...(isAuthenticated
       ? [
-          { label: "HR Dashboard", href: "/hr", icon: LayoutDashboard },
-          { label: "Job Management", href: "/hr/jobs", icon: Briefcase },
-        ]
+        { label: "HR Dashboard", href: "/hr", icon: LayoutDashboard },
+        { label: "Job Management", href: "/hr/jobs", icon: Briefcase },
+      ]
       : []),
   ];
 
@@ -33,31 +35,36 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50/60 font-sans text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="flex min-h-screen flex-col bg-neutral-50/70 font-sans text-neutral-900 antialiased selection:bg-neutral-950 selection:text-white">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-md transition-all">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 border-b border-neutral-200/90 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo & Platform Info */}
           <div className="flex items-center gap-6">
             <Link
               to="/"
-              className="group flex items-center gap-2.5 transition-transform hover:scale-[1.01]"
+              className="group flex items-center gap-3 transition-opacity hover:opacity-85"
             >
-              <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 text-white shadow-md shadow-indigo-500/20">
-                <FileCheck2 className="size-5" />
+              <div className="flex size-9 items-center justify-center rounded-lg bg-neutral-950 text-white shadow-xs">
+                <FileCheck2 className="size-4.5" />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-base font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  TalentAI <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100/80">Recruit</span>
-                </span>
-                <span className="text-[11px] font-medium text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-semibold tracking-tight text-neutral-950">
+                    TalentAI
+                  </span>
+                  <span className="rounded border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+                    Recruit
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-500">
                   AI-Assisted Recruitment & Screening
                 </span>
               </div>
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1.5 ml-4 pl-4 border-l border-slate-200">
+            <nav className="hidden md:flex items-center gap-1 border-l border-neutral-200 pl-6">
               {navItems.map((item) => {
                 const active = isActive(item.href, item.exact);
                 const Icon = item.icon;
@@ -65,13 +72,14 @@ export default function Layout() {
                   <Link
                     key={item.href}
                     to={item.href}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                       active
-                        ? "bg-indigo-50 text-indigo-700 shadow-xs border border-indigo-100"
-                        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                    }`}
+                        ? "bg-neutral-100 text-neutral-950 font-semibold"
+                        : "text-neutral-500 hover:bg-neutral-100/70 hover:text-neutral-950"
+                    )}
                   >
-                    <Icon className={`size-3.5 ${active ? "text-indigo-600" : "text-slate-400"}`} />
+                    <Icon className={cn("size-3.5", active ? "text-neutral-950" : "text-neutral-400")} />
                     {item.label}
                   </Link>
                 );
@@ -80,24 +88,16 @@ export default function Layout() {
           </div>
 
           {/* Right Header Controls */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-[11px] font-medium text-emerald-700 shadow-2xs">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
-              </span>
-              AI Screening Active
-            </div>
-
+          <div className="flex items-center gap-2.5">
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
-                <span className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
-                  <User className="size-3.5 text-indigo-500" />
-                  <span className="font-medium text-slate-700">{user}</span>
+                <span className="hidden sm:flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-600">
+                  <User className="size-3.5 text-neutral-500" />
+                  <span className="font-medium text-neutral-800 max-w-[160px] truncate">{user}</span>
                 </span>
                 <button
                   onClick={signOut}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-rose-600 transition-all shadow-2xs"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                 >
                   <LogOut className="size-3.5" />
                   <span className="hidden sm:inline">Sign out</span>
@@ -106,7 +106,7 @@ export default function Layout() {
             ) : (
               <Link
                 to="/login"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-2xs"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
                 <LogIn className="size-3.5" />
                 <span className="hidden sm:inline">HR Login</span>
@@ -115,7 +115,7 @@ export default function Layout() {
 
             <Link
               to="/apply"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 transition-all hover:shadow-md"
+              className={cn(buttonVariants({ variant: "default", size: "sm" }))}
             >
               <UserPlus className="size-3.5" />
               <span>Apply Now</span>
@@ -124,7 +124,7 @@ export default function Layout() {
         </div>
 
         {/* Mobile Navigation bar */}
-        <div className="flex md:hidden border-t border-slate-100 px-4 py-2 overflow-x-auto gap-2 bg-slate-50/50">
+        <div className="flex md:hidden border-t border-neutral-200/80 px-4 py-2 overflow-x-auto gap-1.5 bg-neutral-50">
           {navItems.map((item) => {
             const active = isActive(item.href, item.exact);
             const Icon = item.icon;
@@ -132,11 +132,12 @@ export default function Layout() {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium ${
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                   active
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:bg-slate-200/60"
-                }`}
+                    ? "bg-neutral-950 text-white"
+                    : "text-neutral-600 hover:bg-neutral-200/60"
+                )}
               >
                 <Icon className="size-3" />
                 {item.label}
@@ -147,23 +148,21 @@ export default function Layout() {
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white/70 py-6 text-xs text-slate-500">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
+      <footer className="mt-auto border-t border-neutral-200 bg-white py-5 text-xs text-neutral-500">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-700">TalentAI Recruitment Platform</span>
-            <span className="text-slate-300">·</span>
+            <span className="font-semibold text-neutral-900">TalentAI Recruitment Platform</span>
+            <span className="text-neutral-300">·</span>
             <span>Human-in-the-Loop Screening Engine</span>
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span className="flex items-center gap-1 text-[11px]">
-              <FileCheck2 className="size-3.5 text-emerald-500" />
-              Supabase Storage & OpenAI Extraction
-            </span>
+          <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+            <FileCheck2 className="size-3.5 text-neutral-500" />
+            <span>Supabase Storage & OpenAI Extraction</span>
           </div>
         </div>
       </footer>

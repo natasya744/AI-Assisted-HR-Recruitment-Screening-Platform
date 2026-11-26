@@ -13,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { EmailDraft } from "@/lib/types";
@@ -49,7 +51,6 @@ export default function EmailDraftCard({
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     } catch {
-      // fallback for older browsers
       const textarea = document.createElement("textarea");
       textarea.value = text;
       document.body.appendChild(textarea);
@@ -65,7 +66,7 @@ export default function EmailDraftCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Mail className="size-4 text-sky-600" />
+          <Mail className="size-4 text-neutral-700" />
           Email Draft
         </CardTitle>
         <CardDescription>
@@ -74,27 +75,24 @@ export default function EmailDraftCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {!draft && !loading && !error && (
-          <button
-            onClick={handleGenerate}
-            className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-sky-600/20 hover:bg-sky-700 hover:shadow-md transition-all"
-          >
+          <Button onClick={handleGenerate} size="sm">
             <FileText className="size-3.5" />
             <span>Generate Email Draft</span>
-          </button>
+          </Button>
         )}
 
         {loading && (
-          <div className="flex items-center gap-3 text-sm text-slate-500">
-            <Loader2 className="size-4 animate-spin text-sky-600" />
+          <div className="flex items-center gap-2.5 text-sm text-neutral-500">
+            <Loader2 className="size-4 animate-spin text-neutral-900" />
             <span>Generating email draft…</span>
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-            <p className="font-medium">Failed to generate draft</p>
-            <p className="mt-0.5 break-words">{error}</p>
-          </div>
+          <Alert variant="destructive">
+            <AlertTitle>Failed to generate draft</AlertTitle>
+            <AlertDescription className="break-words">{error}</AlertDescription>
+          </Alert>
         )}
 
         {draft && (
@@ -102,12 +100,14 @@ export default function EmailDraftCard({
             {/* Subject */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                   Subject
                 </p>
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={() => copyToClipboard(draft.email_subject, "subject")}
-                  className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   {copiedField === "subject" ? (
                     <Check className="size-3 text-emerald-600" />
@@ -115,9 +115,9 @@ export default function EmailDraftCard({
                     <Copy className="size-3" />
                   )}
                   <span>{copiedField === "subject" ? "Copied" : "Copy"}</span>
-                </button>
+                </Button>
               </div>
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm font-medium text-foreground">
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50/70 p-3 text-sm font-medium text-neutral-950">
                 {draft.email_subject}
               </div>
             </div>
@@ -125,12 +125,14 @@ export default function EmailDraftCard({
             {/* Body */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                   Body
                 </p>
-                <button
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
                   onClick={() => copyToClipboard(draft.email_body, "body")}
-                  className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   {copiedField === "body" ? (
                     <Check className="size-3 text-emerald-600" />
@@ -138,26 +140,28 @@ export default function EmailDraftCard({
                     <Copy className="size-3" />
                   )}
                   <span>{copiedField === "body" ? "Copied" : "Copy"}</span>
-                </button>
+                </Button>
               </div>
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-foreground whitespace-pre-line leading-relaxed">
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50/70 p-3.5 text-sm text-neutral-800 whitespace-pre-line leading-relaxed">
                 {draft.email_body}
               </div>
             </div>
 
             {/* Regenerate */}
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={handleGenerate}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
             >
               {loading ? (
-                <Loader2 className="size-3 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <FileText className="size-3" />
+                <FileText className="size-3.5" />
               )}
               <span>Regenerate</span>
-            </button>
+            </Button>
           </div>
         )}
       </CardContent>

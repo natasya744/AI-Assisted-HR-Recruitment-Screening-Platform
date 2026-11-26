@@ -10,7 +10,6 @@ import {
   GraduationCap,
   Award,
   AlertCircle,
-  X,
   Loader2,
   ChevronLeft,
 } from "lucide-react";
@@ -19,6 +18,21 @@ import { getErrorMessage } from "@/lib/errors";
 import type { Job, JobCreate } from "@/lib/types";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import TagInput from "@/components/TagInput";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const DEFAULT_WEIGHTS = { skills: 30, experience: 30, education: 20, other: 20 };
 
@@ -135,434 +149,371 @@ export default function JobsPage() {
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200 pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/hr"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back to Dashboard
-            </Link>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2" style={{ color: '#312e81' }}>
+          <Link
+            to="/hr"
+            className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-neutral-950 transition-colors"
+          >
+            <ChevronLeft className="size-3.5" />
+            Back to Dashboard
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-950 mt-2">
             Job Requisitions
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
             Configure job openings, skill criteria, and customized scoring weights for automated AI screening.
           </p>
         </div>
 
-        <button
+        <Button
+          type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-md transition-all self-start sm:self-center"
+          className="self-start sm:self-center"
         >
           <Plus className="size-4" />
           <span>Create New Job</span>
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs sm:text-sm text-red-700 flex items-center gap-3">
-          <AlertCircle className="size-5 text-red-500 shrink-0" />
-          <span>{error}</span>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Jobs Grid / List */}
       {loading ? (
-        <div className="p-16 text-center text-slate-400 space-y-3">
-          <Loader2 className="mx-auto size-7 animate-spin text-indigo-600" />
+        <div className="p-16 text-center text-neutral-400 space-y-3">
+          <Loader2 className="mx-auto size-6 animate-spin text-neutral-900" />
           <p className="text-xs sm:text-sm font-medium">Loading job requisitions…</p>
         </div>
       ) : jobs.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-16 text-center shadow-xs space-y-3">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <Card className="p-16 text-center space-y-3">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-400">
             <Briefcase className="size-6" />
           </div>
-          <h3 className="text-base font-semibold" style={{ color: '#1e293b' }}>No Job Requisitions Yet</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
+          <h3 className="text-base font-semibold text-neutral-900">No Job Requisitions Yet</h3>
+          <p className="text-xs sm:text-sm text-neutral-500 max-w-sm mx-auto">
             Create your first job posting to start receiving and screening candidate applications.
           </p>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition-colors mt-2"
-          >
-            <Plus className="size-3.5" />
-            Create Job Posting
-          </button>
-        </div>
+          <div className="pt-2">
+            <Button type="button" size="sm" onClick={openCreate}>
+              <Plus className="size-3.5" />
+              Create Job Posting
+            </Button>
+          </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {jobs.map((job) => {
             const weights = job.score_weights || DEFAULT_WEIGHTS;
             return (
-              <div
+              <Card
                 key={job.id}
-                className="group flex flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all"
+                className="group justify-between transition-colors hover:border-neutral-300"
               >
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-lg border border-indigo-100 bg-indigo-50/70 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+                  <CardHeader className="pb-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1.5">
+                        <Badge variant="secondary" className="text-[11px]">
                           {job.min_experience_years > 0
                             ? `${job.min_experience_years}y+ min experience`
                             : "Entry level"}
-                        </span>
+                        </Badge>
+                        <h3 className="text-lg font-semibold tracking-tight text-neutral-950">
+                          {job.title}
+                        </h3>
                       </div>
-                      <h3 className="text-lg font-bold group-hover:text-indigo-600 transition-colors" style={{ color: '#1e293b' }}>
-                        {job.title}
-                      </h3>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => startEdit(job)}
+                          title="Edit Job"
+                        >
+                          <Edit2 className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setDeleteConfirmId(job.id)}
+                          className="text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete Job"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </div>
+                  </CardHeader>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => startEdit(job)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-                        title="Edit Job"
-                      >
-                        <Edit2 className="size-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirmId(job.id)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
-                        title="Delete Job"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <CardContent className="space-y-4">
+                    {job.description && (
+                      <p className="line-clamp-3 text-xs sm:text-sm text-neutral-500 leading-relaxed">
+                        {job.description}
+                      </p>
+                    )}
 
-                  {job.description && (
-                    <p className="line-clamp-3 text-xs sm:text-sm text-slate-500 leading-relaxed font-sans">
-                      {job.description}
-                    </p>
-                  )}
-
-                  {/* Skills Chips */}
-                  <div className="space-y-1.5 pt-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                      <Award className="size-3 text-slate-400" />
-                      Required Skills ({job.required_skills?.length ?? 0})
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.required_skills?.length > 0 ? (
-                        job.required_skills.map((s) => (
-                          <span
-                            key={s}
-                            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700"
-                          >
-                            {s}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">None specified</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Education Chips */}
-                  {job.education_requirements && job.education_requirements.length > 0 && (
+                    {/* Skills Chips */}
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <GraduationCap className="size-3 text-slate-400" />
-                        Education
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
+                        <Award className="size-3" />
+                        Required Skills ({job.required_skills?.length ?? 0})
                       </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {job.education_requirements.map((edu) => (
-                          <span
-                            key={edu}
-                            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700"
-                          >
-                            {edu}
-                          </span>
-                        ))}
+                        {job.required_skills?.length > 0 ? (
+                          job.required_skills.map((s) => (
+                            <Badge key={s} variant="outline" className="bg-neutral-50 text-[11px]">
+                              {s}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-neutral-400 italic">None specified</span>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Score Weights Breakdown Visualizer */}
-                  <div className="rounded-2xl bg-slate-50/80 p-3.5 border border-slate-100 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-                      <span className="flex items-center gap-1">
-                        <Sliders className="size-3 text-indigo-500" />
-                        AI Score Weights
-                      </span>
-                      <span className="text-slate-400">Total 100%</span>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
-                      <div className="rounded-lg bg-white p-1.5 border border-slate-200/60 shadow-2xs">
-                        <span className="text-slate-400 block">Skills</span>
-                        <span className="font-bold text-slate-800">{weights.skills ?? 30}%</span>
+                    {/* Education Chips */}
+                    {job.education_requirements && job.education_requirements.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1">
+                          <GraduationCap className="size-3" />
+                          Education
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {job.education_requirements.map((edu) => (
+                            <Badge key={edu} variant="outline" className="bg-neutral-50 text-[11px]">
+                              {edu}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                      <div className="rounded-lg bg-white p-1.5 border border-slate-200/60 shadow-2xs">
-                        <span className="text-slate-400 block">Exp</span>
-                        <span className="font-bold text-slate-800">{weights.experience ?? 30}%</span>
+                    )}
+
+                    {/* Score Weights Breakdown Visualizer */}
+                    <div className="rounded-xl bg-neutral-50/80 p-3.5 border border-neutral-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-600">
+                        <span className="flex items-center gap-1.5">
+                          <Sliders className="size-3 text-neutral-500" />
+                          AI Score Weights
+                        </span>
+                        <span className="text-neutral-400 font-normal">Total 100%</span>
                       </div>
-                      <div className="rounded-lg bg-white p-1.5 border border-slate-200/60 shadow-2xs">
-                        <span className="text-slate-400 block">Edu</span>
-                        <span className="font-bold text-slate-800">{weights.education ?? 20}%</span>
-                      </div>
-                      <div className="rounded-lg bg-white p-1.5 border border-slate-200/60 shadow-2xs">
-                        <span className="text-slate-400 block">Other</span>
-                        <span className="font-bold text-slate-800">{weights.other ?? 20}%</span>
+
+                      <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                        <div className="rounded-lg bg-white p-2 border border-neutral-200/80">
+                          <span className="text-neutral-400 block text-[10px]">Skills</span>
+                          <span className="font-semibold tabular-nums text-neutral-950">{weights.skills ?? 30}%</span>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-neutral-200/80">
+                          <span className="text-neutral-400 block text-[10px]">Exp</span>
+                          <span className="font-semibold tabular-nums text-neutral-950">{weights.experience ?? 30}%</span>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-neutral-200/80">
+                          <span className="text-neutral-400 block text-[10px]">Edu</span>
+                          <span className="font-semibold tabular-nums text-neutral-950">{weights.education ?? 20}%</span>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-neutral-200/80">
+                          <span className="text-neutral-400 block text-[10px]">Other</span>
+                          <span className="font-semibold tabular-nums text-neutral-950">{weights.other ?? 20}%</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
                 </div>
 
-                <div className="pt-5 border-t border-slate-100 mt-4 flex items-center justify-between text-xs text-slate-400">
+                <CardFooter className="pt-4 border-t border-neutral-100 justify-between text-xs text-neutral-400">
                   <span className="font-mono text-[11px]">ID: {job.id.slice(0, 8)}…</span>
                   <Link
                     to="/apply"
-                    className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                    className="font-medium text-neutral-700 hover:text-neutral-950 transition-colors"
                   >
                     Public Apply Link →
                   </Link>
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
             );
           })}
         </div>
       )}
 
       {/* Create / Edit Modal Dialog */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-                  <Briefcase className="size-5" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold" style={{ color: '#312e81' }}>
-                    {editingJob ? "Edit Job Requisition" : "Create New Job Requisition"}
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Provide the job details and configure AI evaluation scoring weights.
-                  </p>
-                </div>
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent
+          onClose={() => setShowForm(false)}
+          className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-7 space-y-6"
+        >
+          <DialogHeader className="border-b border-neutral-200 pb-4 pr-8">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-900">
+                <Briefcase className="size-5" />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-              >
-                <X className="size-5" />
-              </button>
+              <div>
+                <DialogTitle>
+                  {editingJob ? "Edit Job Requisition" : "Create New Job Requisition"}
+                </DialogTitle>
+                <DialogDescription>
+                  Provide the job details and configure AI evaluation scoring weights.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {formError && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label htmlFor="title" className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
+                  Job Title *
+                </Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    handleChange("title", e.target.value)
+                  }
+                  required
+                  placeholder="e.g. Senior Machine Learning Engineer"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="min_experience_years"
+                  className="text-xs font-semibold uppercase tracking-wider text-neutral-600"
+                >
+                  Min Experience (years)
+                </Label>
+                <Input
+                  id="min_experience_years"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={form.min_experience_years}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    handleChange("min_experience_years", Number(e.target.value))
+                  }
+                  className="tabular-nums"
+                />
+              </div>
             </div>
 
-            {formError && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs sm:text-sm text-red-700 flex items-center gap-3">
-                <AlertCircle className="size-5 text-red-500 shrink-0" />
-                <span>{formError}</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="description"
+                  className="text-xs font-semibold uppercase tracking-wider text-neutral-600"
+                >
+                  Job Description (Full Requirements) *
+                </Label>
+                <span className="text-[11px] text-neutral-400">Used by AI for semantic matching</span>
               </div>
-            )}
+              <Textarea
+                id="description"
+                value={form.description}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                  handleChange("description", e.target.value)
+                }
+                rows={6}
+                required
+                placeholder="Paste complete responsibilities, technical requirements, qualifications, and role summary here..."
+              />
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Job Title & Experience */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label htmlFor="title" className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Job Title *
-                  </label>
-                  <input
-                    id="title"
-                    value={form.title}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleChange("title", e.target.value)
-                    }
-                    required
-                    placeholder="e.g. Senior Machine Learning Engineer"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 shadow-2xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
-                  />
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TagInput
+                id="required_skills"
+                label="Required Skills"
+                items={form.required_skills}
+                onChange={(skills) => handleChange("required_skills", skills)}
+                placeholder="e.g. Python, PyTorch, Azure, SQL..."
+                badgeTone="indigo"
+              />
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="min_experience_years"
-                    className="text-xs font-bold uppercase tracking-wider text-slate-600"
-                  >
-                    Min Experience (years)
-                  </label>
-                  <input
-                    id="min_experience_years"
-                    type="number"
-                    min="0"
-                    max="50"
-                    value={form.min_experience_years}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      handleChange("min_experience_years", Number(e.target.value))
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm tabular-nums text-slate-900 shadow-2xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
-                  />
-                </div>
-              </div>
+              <TagInput
+                id="education_requirements"
+                label="Education Requirements"
+                items={form.education_requirements}
+                onChange={(edu) => handleChange("education_requirements", edu)}
+                placeholder="e.g. Bachelor's, Master's..."
+                badgeTone="slate"
+              />
+            </div>
 
-              {/* Full Description */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="description"
-                    className="text-xs font-bold uppercase tracking-wider text-slate-600"
-                  >
-                    Job Description (Full Requirements) *
-                  </label>
-                  <span className="text-[11px] text-slate-400">Used by AI for semantic matching</span>
-                </div>
-                <textarea
-                  id="description"
-                  value={form.description}
-                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                    handleChange("description", e.target.value)
-                  }
-                  rows={6}
-                  required
-                  placeholder="Paste complete responsibilities, technical requirements, qualifications, and role summary here..."
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm leading-relaxed text-slate-800 placeholder:text-slate-300 shadow-2xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
-                />
-              </div>
-
-              {/* Skills and Education */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <TagInput
-                  id="required_skills"
-                  label="Required Skills"
-                  items={form.required_skills}
-                  onChange={(skills) => handleChange("required_skills", skills)}
-                  placeholder="e.g. Python, PyTorch, Azure, SQL..."
-                  badgeTone="indigo"
-                />
-
-                <TagInput
-                  id="education_requirements"
-                  label="Education Requirements"
-                  items={form.education_requirements}
-                  onChange={(edu) => handleChange("education_requirements", edu)}
-                  placeholder="e.g. Bachelor's, Master's..."
-                  badgeTone="slate"
-                />
-              </div>
-
-              {/* Score Weights Configurator */}
-              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-indigo-600" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-                      AI Scoring Weights Allocation
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs font-bold ${
-                      totalWeight === 100 ? "text-emerald-600" : "text-amber-600"
-                    }`}
-                  >
-                    Sum: {totalWeight}% {totalWeight !== 100 && "(recommend 100%)"}
+            {/* Score Weights Configurator */}
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50/70 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-neutral-700" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                    AI Scoring Weights Allocation
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 flex justify-between">
-                      <span>Skills</span>
-                      <span className="font-bold text-indigo-600">{currentWeights.skills ?? 30}%</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={currentWeights.skills ?? 30}
-                      onChange={(e) => handleWeightChange("skills", Number(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 flex justify-between">
-                      <span>Experience</span>
-                      <span className="font-bold text-indigo-600">{currentWeights.experience ?? 30}%</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={currentWeights.experience ?? 30}
-                      onChange={(e) => handleWeightChange("experience", Number(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 flex justify-between">
-                      <span>Education</span>
-                      <span className="font-bold text-indigo-600">{currentWeights.education ?? 20}%</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={currentWeights.education ?? 20}
-                      onChange={(e) => handleWeightChange("education", Number(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 flex justify-between">
-                      <span>Other</span>
-                      <span className="font-bold text-indigo-600">{currentWeights.other ?? 20}%</span>
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={currentWeights.other ?? 20}
-                      onChange={(e) => handleWeightChange("other", Number(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
-                    />
-                  </div>
-                </div>
+                <span
+                  className={`text-xs font-semibold tabular-nums ${
+                    totalWeight === 100 ? "text-emerald-700" : "text-amber-700"
+                  }`}
+                >
+                  Sum: {totalWeight}% {totalWeight !== 100 && "(recommend 100%)"}
+                </span>
               </div>
 
-              {/* Modal Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50 transition-all"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      <span>Saving…</span>
-                    </>
-                  ) : editingJob ? (
-                    "Update Job Posting"
-                  ) : (
-                    "Create Job Posting"
-                  )}
-                </button>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(["skills", "experience", "education", "other"] as const).map((key) => {
+                  const defaultVal = DEFAULT_WEIGHTS[key];
+                  const val = currentWeights[key] ?? defaultVal;
+                  return (
+                    <div key={key} className="space-y-1.5">
+                      <label className="text-[11px] font-medium text-neutral-600 flex justify-between capitalize">
+                        <span>{key === "experience" ? "Experience" : key === "education" ? "Education" : key}</span>
+                        <span className="font-semibold tabular-nums text-neutral-950">{val}%</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={val}
+                        onChange={(e) => handleWeightChange(key, Number(e.target.value))}
+                        className="w-full accent-neutral-950 cursor-pointer"
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <DialogFooter className="border-t border-neutral-200 pt-4">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>Saving…</span>
+                  </>
+                ) : editingJob ? (
+                  "Update Job Posting"
+                ) : (
+                  "Create Job Posting"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
